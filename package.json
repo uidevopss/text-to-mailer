@@ -1,0 +1,14 @@
+{
+  "name": "text-to-mailer-chatgpt-bridge",
+  "version": "18.0.0",
+  "private": true,
+  "description": "Text to Mailer with local Microsoft Edge/CDP Ai-1 image bridge and Ai-2 email-code generation",
+  "scripts": {
+    "start": "node cloud/server.js",
+    "start:bridge": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "playwright": "^1.55.0"
+  }
+}
