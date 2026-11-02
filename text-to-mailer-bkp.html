@@ -1,0 +1,2913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Text to Mailer</title>
+<meta name="theme-color" content="#4F46E5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* =====================================================================
+     TEXT-TO-MAILER · Workspace UI v2
+     Tokens → base → header/stepper → wizard cards → forms/buttons →
+     Step 4 workspace → overlays → 3-emailer comparison → responsive
+     ===================================================================== */
+  :root{
+    --bg:#F4F5FA; --surface:#FFFFFF; --surface-2:#F8F9FC; --line:#E3E6EF; --line-2:#EDEFF5;
+    --ink:#141828; --ink-2:#394058; --muted:#6A7188; --faint:#9AA1B5;
+    --primary:#4F46E5; --primary-hover:#4338CA; --primary-soft:#EEF0FF; --primary-line:#D3D8FF;
+    --magic:linear-gradient(135deg,#5B5BF0 0%,#8B5CF6 55%,#D946EF 100%);
+    --success:#0F8A5F; --success-soft:#E8F8F1; --success-line:#BDE8D5;
+    --danger:#D6304D; --danger-soft:#FFF1F3; --danger-line:#F3C5CE;
+    --warn:#A8620C; --warn-soft:#FFF8E6; --warn-line:#F1DFAE;
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px;
+    --shadow-sm:0 1px 2px rgba(20,24,40,.06);
+    --shadow-md:0 4px 16px rgba(20,24,40,.07),0 1px 2px rgba(20,24,40,.04);
+    --shadow-lg:0 20px 50px rgba(20,24,40,.16);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --font:"Inter",ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --logo-h:68px;
+    /* legacy names used by JS-rendered gallery rows */
+    --serif:var(--font); --postal-blue:var(--primary); --stamp-red:var(--danger);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:var(--font);color:var(--ink);background:var(--bg)}
+  body{overflow-x:clip;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5;
+    background:radial-gradient(1100px 380px at 50% -140px,#E6E7FF 0%,transparent 70%),var(--bg)}
+  button,input,textarea{font:inherit}
+  button{cursor:pointer}
+  button:disabled{cursor:not-allowed}
+  :focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .app-shell{min-height:100vh;position:relative}
+  .app-shell.loading-active .topbar{display:none}
+  .hide{display:none !important}
+  .hidden-file{display:none !important}
+
+  /* ---------- Header ---------- */
+  .topbar{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:20px;
+    height:60px;padding:0 24px;background:rgba(255,255,255,.88);backdrop-filter:saturate(1.5) blur(12px);-webkit-backdrop-filter:saturate(1.5) blur(12px);
+    border-bottom:1px solid var(--line)}
+  .topbrand{height:calc(var(--logo-h)*.72);overflow:hidden;display:flex;align-items:flex-start}   /* logo.png carries built-in empty margin: crop it */
+  .topbrand img{display:block;height:var(--logo-h);width:auto;margin-top:calc(var(--logo-h)*-.19)}
+  .top-actions{display:flex;gap:8px}
+  .hdr-btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 13px;border:1px solid var(--line);background:var(--surface);
+    border-radius:10px;font-size:13px;font-weight:600;color:var(--ink-2);box-shadow:var(--shadow-sm);transition:border-color .15s,background .15s,color .15s}
+  .hdr-btn:hover{border-color:var(--primary-line);background:var(--primary-soft);color:var(--primary)}
+  .hdr-btn svg{flex:none}
+
+  /* Stepper */
+  .wizard-nav{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0}
+  .wizard-step-dot{display:flex;align-items:center;gap:9px;padding:5px 13px 5px 6px;border-radius:999px;color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap;transition:background .15s,color .15s;user-select:none}
+  .wizard-step-dot .dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;transition:all .15s}
+  .wizard-step-dot.active{background:var(--primary-soft);color:var(--primary)}
+  .wizard-step-dot.active .dot{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 3px rgba(79,70,229,.16)}
+  .wizard-step-dot.done{color:var(--ink-2);cursor:pointer}
+  .wizard-step-dot.done .dot{background:var(--success);border-color:var(--success);color:#fff;font-size:0}
+  .wizard-step-dot.done .dot::before{content:"✓";font-size:12px;font-weight:800}
+  .wizard-step-dot.done:hover,.wizard-step-dot.next:hover{background:var(--surface-2)}
+  .wizard-step-dot.next{cursor:pointer}
+  .wizard-line{width:26px;height:2px;border-radius:2px;background:var(--line);flex:none}
+  .wizard-step-dot.done + .wizard-line{background:var(--success)}
+
+  /* ---------- Page frame ---------- */
+  .main-wrap{position:relative;padding:28px 24px 72px}
+  .wizard-stage{width:min(1480px,100%);margin:0 auto;position:relative}
+  .wizard-card{display:none;width:min(960px,100%);margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-md);padding:32px 36px;animation:stepIn .32s ease both}
+  .wizard-card.active{display:block}
+  #step1{width:min(1160px,100%)}
+  @keyframes stepIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes floatLogo{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes loadPulse{0%,100%{opacity:.65}50%{opacity:1}}
+  @keyframes progressMove{from{width:16%}to{width:92%}}
+
+  /* ---------- Loading screen ---------- */
+  .loader-card{background:transparent;border:none;box-shadow:none;min-height:80vh;display:none;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+  .loader-card.active{display:flex}
+  .loader-logo{height:96px;width:auto;animation:floatLogo 2.6s ease-in-out infinite}
+  .loader-title{margin-top:18px;font-size:17px;font-weight:700;color:var(--ink);animation:loadPulse 1.8s ease-in-out infinite}
+  .loader-sub{font-size:13px;color:var(--muted);margin-top:4px}
+  .progress-track{margin-top:24px;width:min(340px,76vw);height:8px;background:var(--line);border-radius:999px;overflow:hidden}
+  .progress-fill{height:100%;width:18%;border-radius:999px;background:var(--magic);animation:progressMove 5.45s cubic-bezier(.22,.65,.35,1) forwards}
+  .loader-percent{margin-top:14px;font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;color:var(--faint)}
+  .startup-checks{display:flex;flex-direction:column;gap:8px;margin-top:20px;width:min(360px,84vw);padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}
+  .startup-check{font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:9px}
+  .startup-check.ready{color:var(--success)}.startup-check.warn{color:var(--warn)}.startup-check.fail{color:var(--danger)}
+  .startup-dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .startup-check.ready .startup-dot{background:var(--success);box-shadow:0 0 0 3px var(--success-soft)}
+  .startup-check.warn .startup-dot{background:#E0A139;box-shadow:0 0 0 3px var(--warn-soft)}
+  .startup-check.fail .startup-dot{background:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+
+  /* ---------- Step headings ---------- */
+  .step-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
+  .step-kicker{display:inline-flex;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--primary);background:var(--primary-soft);padding:4px 10px;border-radius:999px;margin-bottom:10px}
+  .step-title{font-size:28px;line-height:1.15;margin:0;color:var(--ink);font-weight:800;letter-spacing:-.025em}
+  .step-title span{color:var(--primary)}
+  .step-copy{margin:8px 0 0;font-size:14.5px;line-height:1.6;color:var(--muted);max-width:64ch}
+  .step-mini-note{font-size:12px;font-weight:500;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
+
+  /* ---------- Forms ---------- */
+  .field-label{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  .field-label small{font-weight:500;color:var(--faint);font-size:12px}
+  .input-wrap{margin-top:0}
+  .text-area,.instruction-area,.quick-edit-textarea,.genlog textarea{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .text-area{min-height:380px;border-radius:var(--r-md);padding:16px 18px;font-family:var(--mono);font-size:13px;line-height:1.7;resize:vertical}
+  .instruction-area{min-height:112px;border-radius:var(--r-md);padding:12px 14px;font-size:13.5px;line-height:1.55;resize:vertical}
+  .text-area:focus,.instruction-area:focus,.quick-edit-textarea:focus,.overlay-card input[type=text]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(79,70,229,.12)}
+  .hint{font-size:12.5px;line-height:1.55;color:var(--muted);margin-top:10px}
+  .hint code{font-family:var(--mono);font-size:11.5px;background:var(--primary-soft);color:var(--primary);padding:2px 6px;border-radius:6px}
+  .hint b{color:var(--ink-2)}
+  input[type=file]{width:100%;font-size:12.5px;color:var(--muted);padding:9px 10px;border:1.5px dashed var(--line);border-radius:var(--r-md);background:var(--surface-2);cursor:pointer;transition:border-color .15s,background .15s}
+  input[type=file]:hover{border-color:var(--primary-line);background:var(--primary-soft)}
+  input[type=file]::file-selector-button{margin-right:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:8px;padding:6px 11px;font-weight:600;font-size:12px;cursor:pointer}
+
+  .button-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:26px;padding-top:22px;border-top:1px solid var(--line-2)}
+  .primary-btn,.secondary-btn,.ghost-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:0 18px;min-height:40px;font-size:13.5px;font-weight:600;border:1px solid transparent;transition:background .15s,border-color .15s,box-shadow .15s,transform .1s,color .15s}
+  .primary-btn,.secondary-btn{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(79,70,229,.35),inset 0 1px 0 rgba(255,255,255,.14)}
+  .primary-btn:hover,.secondary-btn:hover{background:var(--primary-hover)}
+  .primary-btn:active,.secondary-btn:active,.ghost-btn:active{transform:translateY(1px)}
+  .ghost-btn{background:var(--surface);border-color:var(--line);color:var(--ink-2);box-shadow:var(--shadow-sm)}
+  .ghost-btn:hover{border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+  #trioBtn3, #trioRegenBtn{background:var(--magic);color:#fff;border:0;box-shadow:0 4px 14px rgba(139,92,246,.35)}
+  #trioBtn3:hover, #trioRegenBtn:hover{background:var(--magic);filter:brightness(1.07);color:#fff}
+  .button-row .ghost-btn:first-child{margin-right:auto}      /* Back sits left, forward actions right */
+
+  .text-link{font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}.text-link:hover{color:var(--primary)}
+  .persist-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+  .status{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:10px;min-height:18px}.status.error{color:var(--danger)}.status.ok{color:var(--success)}
+  .genlog{display:none;margin-top:12px;border:1px solid var(--danger-line);border-radius:var(--r-md);padding:12px;background:var(--danger-soft)}
+  .genlog-title{font-size:12.5px;color:var(--danger);font-weight:700;margin-bottom:8px}
+  .genlog textarea{min-height:76px;border-color:var(--danger-line);border-radius:8px;padding:9px;font-family:var(--mono);font-size:11.5px}
+
+  /* ---------- Step 1 two-column ---------- */
+  .s1-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:22px;align-items:start}
+  .s1-side{display:flex;flex-direction:column;gap:14px}
+  .slide-group{margin:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2);overflow:hidden}
+  .slide-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border:0;background:transparent;color:var(--ink);font-size:13.5px;font-weight:700;text-align:left}
+  .slide-toggle .chevron{font-size:16px;color:var(--faint);transition:transform .24s ease}
+  .slide-toggle.open .chevron{transform:rotate(180deg)}
+  .slide-panel{max-height:0;overflow:hidden;opacity:0;padding:0 16px;transition:max-height .3s ease,opacity .25s ease,padding .3s ease}
+  .slide-panel.open{max-height:720px;opacity:1;padding:0 16px 16px}
+  #step1 .slide-toggle{pointer-events:none;cursor:default;padding-bottom:10px}     /* options are always visible on Step 1 */
+  #step1 .slide-toggle .chevron{display:none}
+  #step1 .slide-panel{max-height:none;opacity:1;padding:0 16px 16px}
+  .slide-panel .options-card{margin-top:0}
+
+  .options-card{margin-top:18px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);padding:16px}
+  .slide-panel .options-card{border:0;background:transparent;padding:0}
+  .options-title{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:12px}
+  .logo-pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .logo-slot{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:12px}
+  .logo-slot-title{font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:8px}
+  .logo-preview-wrap{align-items:center;gap:8px;margin-bottom:8px;min-height:44px}
+  .logo-preview-img{display:block;max-height:42px;max-width:150px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:4px;object-fit:contain}
+  #step1 .logo-pair-grid{grid-template-columns:1fr}
+
+  /* ---------- Step 2: hero choice ---------- */
+  .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+  .choice-card{position:relative;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r-lg);padding:20px;transition:transform .15s,box-shadow .15s,border-color .15s;cursor:pointer}
+  .choice-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--primary-line)}
+  .choice-card.selected{border-color:var(--primary);box-shadow:0 0 0 4px rgba(79,70,229,.12);background:linear-gradient(180deg,#fff,var(--primary-soft))}
+  .choice-card.selected::after{content:"✓";position:absolute;top:14px;right:14px;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+  .choice-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:var(--primary-soft);margin-bottom:12px}
+  .choice-title{font-size:17px;font-weight:700;color:var(--ink)}
+  .choice-sub{font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px}
+  .choice-visual{height:104px;border:1px dashed var(--line);border-radius:var(--r-md);background:var(--surface-2);margin-top:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .choice-visual.image .fake-banner{width:78%;height:54px;border-radius:7px;background:linear-gradient(90deg,#4338CA 0 48%,#818CF8 48% 100%);position:relative;box-shadow:0 8px 14px rgba(67,56,202,.16)}
+  .choice-visual.image .fake-banner::after{content:"";position:absolute;right:9%;top:12px;width:34px;height:34px;border-radius:50%;background:#FBBF24;box-shadow:-44px 14px 0 0 #93C5FD}
+  .choice-visual.text .fake-text-lines{width:76%}
+  .choice-visual.text .fake-text-lines i{display:block;height:7px;border-radius:8px;background:#C7CBE0;margin:9px 0}
+  .choice-visual.text .fake-text-lines i:nth-child(1){width:44%;background:var(--primary)}.choice-visual.text .fake-text-lines i:nth-child(2){width:86%}.choice-visual.text .fake-text-lines i:nth-child(3){width:72%}.choice-visual.text .fake-text-lines i:nth-child(4){width:55%}
+  .choice-select{margin-top:14px;width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);font-weight:600;font-size:13px}
+  .choice-card.selected .choice-select{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .mode-description{margin-top:14px;font-size:13px;color:var(--ink-2);background:var(--primary-soft);border:1px solid var(--primary-line);border-radius:var(--r-md);padding:11px 14px}
+
+  .banner-tools{border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-md);padding:14px;margin-top:14px}
+  .banner-mini-head{font-size:13px;font-weight:700;color:var(--ink)}
+  .mini-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
+  .mini-row button{font-size:12.5px;font-weight:600;padding:9px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);box-shadow:var(--shadow-sm)}
+  .mini-row button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .mini-row button:hover{border-color:var(--primary-line)}
+  .mini-row button.primary:hover{background:var(--primary-hover)}
+  .banner-tools input[type=file]{margin-top:10px}
+  .banner-preview{display:none;margin-top:12px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}
+  .banner-preview img{display:block;width:100%;max-width:650px;max-height:220px;object-fit:cover;border-radius:8px}
+  .banner-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--success);background:var(--success-soft);border-radius:999px;padding:5px 10px;margin-top:8px}
+
+  /* ---------- Step 3: review ---------- */
+  .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .review-card{border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-md);padding:15px 16px;transition:border-color .15s,background .15s}
+  .review-card:hover{border-color:var(--primary-line);background:var(--surface)}
+  .review-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:8px}
+  .review-value{font-size:13.5px;line-height:1.6;color:var(--ink-2);min-height:44px;white-space:pre-wrap}
+  .trio-hint{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.55;padding:10px 14px;border-radius:var(--r-md);background:linear-gradient(135deg,#F5F3FF,#FDF2FB);border:1px solid #E9DDFB}
+
+  /* ---------- Step 4: workspace ---------- */
+  .final-card{width:100%;padding:0;background:transparent;box-shadow:none;border:none;animation:stepIn .32s ease both}
+  .final-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+  .final-title{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin:0}
+  .final-sub{font-size:13.5px;color:var(--muted);margin:4px 0 0}
+  .final-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .final-actions button{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);font-size:13px;font-weight:600;box-shadow:var(--shadow-sm);transition:all .15s}
+  .final-actions button:hover{border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+  .final-actions #downloadBtn{background:var(--primary);border-color:var(--primary);color:#fff}
+  .final-actions #downloadBtn:hover{background:var(--primary-hover);color:#fff}
+  .final-actions #saveEditBtn{background:var(--success);border-color:var(--success);color:#fff}
+  .final-actions #saveEditBtn:hover{filter:brightness(1.06);color:#fff;background:var(--success)}
+  .edit-banner{display:none;font-size:13px;font-weight:600;color:var(--success);background:var(--success-soft);border:1px solid var(--success-line);padding:10px 14px;border-radius:var(--r-md);margin-bottom:14px}
+
+  .final-layout{display:grid;grid-template-columns:372px minmax(0,1fr);gap:20px;align-items:start}
+  .final-preview-column{min-width:0}
+  .quick-edit-card{position:sticky;top:76px;display:flex;flex-direction:column;max-height:calc(100vh - 92px);margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);overflow:hidden}
+  .side-scroll{flex:1;min-height:0;overflow-y:auto;padding:16px 16px 10px;scrollbar-width:thin}
+  .side-foot{border-top:1px solid var(--line);padding:12px 16px 14px;background:var(--surface-2)}
+  .v8-label{display:flex;align-items:baseline;gap:6px;font-size:13px;font-weight:700;color:var(--ink);margin:18px 0 8px}
+  .v8-label:first-child{margin-top:0}
+  .v8-label small{font-weight:500;color:var(--faint);font-size:12px}
+  .v8-panel .input-wrap{margin-top:0}
+  .v8-panel .text-area{min-height:170px;font-size:12.5px}
+  .v8-panel .options-card{margin-top:0;padding:12px}
+  .v8-panel .banner-tools{margin-top:0}
+  .v8-panel input[type=file]{max-width:100%;width:100%;font-size:11.5px}
+  .v8-panel .logo-pair-grid{grid-template-columns:1fr}
+  .v8-generate{width:100%;margin-top:8px}
+  .side-foot .v8-generate:first-child{margin-top:0}
+  .side-foot .status{margin-top:8px;min-height:0}
+  .design-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .design-actions .ghost-btn{min-height:36px;padding:0 10px;font-size:12.5px}
+  .design-actions #refineLink{grid-column:1/-1;border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+
+  .final-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;background:transparent;border:0;padding:0}
+  .viewport-toggle{display:inline-flex;gap:2px;background:#E8EAF3;padding:3px;border-radius:11px}
+  .viewport-toggle button{padding:7px 14px;border:none;border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;transition:all .15s}
+  .viewport-toggle button:hover{color:var(--ink)}
+  .viewport-toggle button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(20,24,40,.12)}
+  .viewport-toggle .trio-view-btn{background:transparent;color:var(--primary);white-space:nowrap;margin-left:4px;position:relative}
+  .viewport-toggle .trio-view-btn::before{content:"";position:absolute;left:-3px;top:8px;bottom:8px;width:1px;background:#CDD1E0}
+  .viewport-toggle .trio-view-btn:hover{background:var(--primary-soft);color:var(--primary-hover)}
+  .frame-shell{border:1px solid var(--line);border-radius:var(--r-lg);min-height:640px;display:flex;justify-content:center;align-items:flex-start;padding:24px;overflow:auto;
+    background:radial-gradient(#D3D7E6 1px,transparent 1px) 0 0/18px 18px,#EEF0F7}
+  iframe{border:none;width:700px;max-width:100%;height:calc(100vh - 190px);min-height:620px;border-radius:8px;background:#fff;box-shadow:0 10px 34px rgba(20,24,40,.14)}
+  iframe.mobile{width:375px;margin:0 auto;display:block;border-radius:22px;box-shadow:0 0 0 8px #1B1F33,0 22px 50px rgba(20,24,40,.3)}
+  .code-box{display:none;width:100%;min-height:620px;font-family:var(--mono);font-size:12px;line-height:1.6;padding:18px;border:none;border-radius:var(--r-md);background:#0F1423;color:#CBD5E1;white-space:pre;overflow:auto}
+  .code-box.visible{display:block}
+  .empty-state{align-self:center;font-size:14px;color:var(--muted);text-align:center;padding:90px 30px;line-height:1.7}
+  .empty-state::before{content:"✉️";display:block;font-size:38px;margin-bottom:10px}
+
+  /* ---------- Overlays, toast, busy ---------- */
+  #busyOverlay{display:none;position:fixed;inset:0;background:rgba(20,24,40,.5);backdrop-filter:blur(4px);z-index:400;align-items:center;justify-content:center;padding:20px}
+  #busyOverlay.show{display:flex}
+  .busy-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px 34px;max-width:380px;width:100%;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+  .busy-spinner{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--primary);animation:busyspin .8s linear infinite}
+  @keyframes busyspin{to{transform:rotate(360deg)}}
+  #busyOverlayMsg{font-size:14px;font-weight:600;color:var(--ink);line-height:1.5}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:500;box-shadow:var(--shadow-lg)}.toast.show{opacity:1}
+  .overlay{display:none;position:fixed;inset:0;background:rgba(20,24,40,.5);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:20px}
+  .overlay-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);padding:26px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+  .close-x{cursor:pointer;font-size:22px;line-height:1;color:var(--faint);width:32px;height:32px;display:grid;place-items:center;border-radius:8px;transition:all .15s}
+  .close-x:hover{background:var(--surface-2);color:var(--ink)}
+  .overlay-card input[type=text]{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;color:var(--ink)}
+  .overlay-card p{font-size:13px;line-height:1.6;color:var(--muted)}
+  .gallery-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;margin-top:8px}
+
+
+  .brand-site-card{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2)}
+  .brand-site-card input[type=url]{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink);font:inherit;font-size:13px}
+  .brand-site-card input[type=url]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(106,70,218,.09)}
+  .brand-site-status{min-height:0;margin-top:4px}
+  .multi-gen-card{margin-top:14px;padding:13px 15px;border:1px solid #e7dcf4;border-radius:14px;background:linear-gradient(135deg,#fcfaff,#fff9fd)}
+  .multi-gen-toggle{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+  .multi-gen-toggle input{width:16px;height:16px;margin-top:3px;accent-color:var(--primary);flex:none}
+  .multi-gen-toggle b{display:block;font-size:13.5px;color:var(--ink)}
+  .multi-gen-toggle small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:3px}
+  .multi-gen-settings label small{font-size:11px;color:var(--muted);font-weight:500;margin-top:3px}
+  .multi-gen-settings{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #ede4f5}
+  .multi-gen-settings label{font-size:12.5px;font-weight:700;color:var(--ink);min-width:150px}
+  .multi-gen-settings select{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff;color:var(--ink);font-size:12.5px;min-width:125px}
+  .multi-gen-settings button{margin-left:auto}
+  .final-multi-settings{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0}
+  .final-multi-settings label{min-width:100%;}
+  .final-multi-settings button{width:100%;margin-left:0; min-height:32px; border-radius:8px;}
+  @media(max-width:600px){.multi-gen-settings button{width:100%;margin-left:0}.multi-gen-settings select{flex:1}}
+
+  /* ---------- 3 Unique Emailers comparison ---------- */
+  .trio-shell{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);width:min(1480px,98vw);max-height:94vh;display:flex;flex-direction:column;padding:20px 22px;box-shadow:var(--shadow-lg)}
+  .trio-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .trio-title{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+  .trio-sub{font-size:13px;color:var(--muted);margin-top:4px;max-width:760px;line-height:1.5}
+  .trio-head-actions{display:flex;gap:8px;align-items:center}
+  .trio-head-actions .ghost-btn,.trio-head-actions #trioRegenBtn{min-height:36px;padding:0 14px;font-size:13px}
+  .trio-notice{display:none;margin-top:12px;font-size:12.5px;font-weight:600;line-height:1.5;color:var(--warn);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-md);padding:9px 13px}
+  .trio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin-top:14px;overflow-y:auto;padding-bottom:4px}
+  .trio-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2);padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .trio-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .trio-num{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary)}
+  .trio-name{font-size:15px;font-weight:700;color:var(--ink);margin-top:2px}
+  .trio-sw{display:flex;gap:4px;flex:none}.trio-sw i{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.12);display:block}
+  .trio-chips{display:flex;gap:6px;flex-wrap:wrap}.trio-chips span{font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-soft);border-radius:999px;padding:4px 9px}
+  .trio-banner{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:#fff;min-height:70px}
+  .trio-banner img{width:100%;height:auto;max-height:170px;object-fit:cover}
+  .trio-skel{height:70px;background:linear-gradient(90deg,#EDEFF6,#F8F9FC,#EDEFF6);background-size:200% 100%;animation:trioShimmer 1.4s linear infinite}
+  .trio-skel.tall{height:260px}
+  @keyframes trioShimmer{to{background-position:-200% 0}}
+  .trio-src{font-size:11.5px;font-weight:600;color:var(--faint);min-height:14px}
+  .trio-state{font-size:12.5px;font-weight:700;color:var(--muted)}.trio-state.done{color:var(--success)}.trio-state.error{color:var(--danger)}.trio-state.banner,.trio-state.email{color:var(--primary)}
+  .trio-prev{border:1px solid var(--line);border-radius:var(--r-md);background:#fff;max-height:520px;overflow-y:auto;overflow-x:hidden}
+  .trio-prev-inner{position:relative;width:100%}
+  .trio-prev iframe{position:absolute;left:0;top:0;width:650px;max-width:none;min-height:0;height:900px;border-radius:0;box-shadow:none;transform-origin:0 0;background:#fff}
+  .trio-err{display:none;font-size:12px;line-height:1.5;color:var(--danger);background:var(--danger-soft);border:1px solid var(--danger-line);border-radius:10px;padding:8px 10px;white-space:pre-wrap;max-height:110px;overflow:auto}
+  .trio-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  .trio-btns button{min-height:36px;padding:0 13px;font-size:12.5px}.trio-btns button:disabled{opacity:.45}
+
+  /* ---------- Responsive ---------- */
+  @media(max-width:1100px){
+    .final-layout{grid-template-columns:1fr}
+    .quick-edit-card{position:static;max-height:none}
+    .side-scroll{overflow:visible}
+    .s1-grid{grid-template-columns:1fr}
+    .trio-grid{grid-template-columns:1fr}
+    .wizard-line{width:16px}
+  }
+  @media(max-width:900px){
+    .topbar{padding:0 14px;gap:10px}
+    .wizard-step-dot{padding:4px}
+    .wizard-step-dot span:not(.dot){display:none}
+    .hdr-btn .lbl{display:none}.hdr-btn{padding:0;width:36px;justify-content:center}
+    .main-wrap{padding:18px 14px 56px}
+    .wizard-card{padding:24px 20px}
+    .choice-grid,.review-grid,.logo-pair-grid{grid-template-columns:1fr}
+    .step-title{font-size:24px}
+    .step-card-top{flex-direction:column;gap:10px}
+    .frame-shell{min-height:560px;padding:14px}
+  }
+  @media(max-width:600px){
+    :root{--logo-h:56px}
+    .main-wrap{padding:12px 10px 40px}
+    .wizard-card{border-radius:var(--r-lg)}
+    .loader-logo{height:80px}
+    .step-title{font-size:22px}
+    .text-area{min-height:300px}
+    .final-title{font-size:20px}
+    .final-actions{width:100%}.final-actions button{flex:1;justify-content:center}
+    .button-row .ghost-btn:first-child{margin-right:0}
+  }
+
+  /* =====================================================================
+     THEME v4 — original lavender identity, tighter layout, left sidebar
+     Colours/gradients/rings are the original Text-to-Mailer look. What changed is spacing:
+     compact header, top-aligned cards, one shared card width, and a Step 4 workspace whose
+     controls live in a full-height sidebar on the left edge (preview fills the rest).
+     ===================================================================== */
+  :root{
+    --bg:#f7e9ff; --surface:#ffffff; --surface-2:#fbf9ff; --line:#e6d9f4; --line-2:#efe5f8;
+    --ink:#23233a; --ink-2:#4b4960; --muted:#74738c; --faint:#9a90a7;
+    --primary:#4c3acb; --primary-2:#7a55e8; --primary-hover:#3f2fb0; --primary-soft:#efe9ff; --primary-line:#d9cdf1;
+    --accent:#ff5d72; --purple:#6b3fd6;
+    --magic:linear-gradient(135deg,#4f37c8,#7b5ae8);
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px;
+    --shadow-sm:0 2px 6px rgba(89,62,129,.08);
+    --shadow-md:0 16px 44px rgba(71,48,116,.15),0 5px 18px rgba(76,58,203,.07);
+    --shadow-lg:0 24px 60px rgba(37,27,51,.25);
+    --font:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --logo-h:70px;
+  }
+  html,body{background:var(--bg)}
+  body{background:var(--bg);letter-spacing:0}
+  :focus-visible{outline:2px solid var(--primary-2);outline-offset:2px}
+
+  /* ---- Original lavender backdrop (gradient + soft rings) ---- */
+  .app-shell{background:radial-gradient(circle at 75% 22%,rgba(255,255,255,.85),transparent 27%),linear-gradient(145deg,#fbf2ff 0%,#f5e8ff 44%,#f2e4ff 100%)}
+  .app-shell::before,.app-shell::after{content:"";position:fixed;pointer-events:none;z-index:0;border-radius:50%;border:1px solid rgba(168,116,225,.13);transform:rotate(-14deg)}
+  .app-shell::before{width:125vw;height:58vh;left:-26vw;bottom:-20vh;box-shadow:0 -30px 0 rgba(178,115,235,.07),0 -72px 0 rgba(178,115,235,.06),0 -118px 0 rgba(178,115,235,.045)}
+  .app-shell::after{width:110vw;height:52vh;right:-54vw;top:11vh;border-color:rgba(148,108,224,.08);box-shadow:0 28px 0 rgba(194,135,238,.05)}
+  .main-wrap{z-index:2}
+
+  /* ---- Header: logo | steps | actions, transparent on the lavender ---- */
+  .topbar{position:static;z-index:auto;height:72px;gap:20px;padding:0 26px;background:transparent;border:0;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .topbrand img{mix-blend-mode:multiply;filter:brightness(1.05) contrast(1.03)}      /* logo.png has an off-white box: let the lavender show through */
+  .hdr-btn{height:36px;border:1px solid #e7d9f2;background:rgba(255,255,255,.86);border-radius:12px;color:#5f596d;box-shadow:0 4px 10px rgba(89,62,129,.08)}
+  .hdr-btn:hover{transform:translateY(-1px);border-color:#c7b4e8;background:rgba(255,255,255,.96);color:var(--primary);box-shadow:0 8px 16px rgba(89,62,129,.12)}
+
+  .wizard-nav{gap:8px}
+  .wizard-step-dot{padding:0;gap:8px;border-radius:0;background:none !important;color:#a09ab0;font-size:12.5px;font-weight:700}
+  .wizard-step-dot .dot{width:26px;height:26px;background:#efe6f7;border:1px solid #e5d9f2;color:#8c809e;font-size:12px;font-weight:800}
+  .wizard-step-dot.active{color:var(--primary)}
+  .wizard-step-dot.active .dot{background:linear-gradient(135deg,var(--primary),var(--primary-2));border-color:transparent;color:#fff;box-shadow:0 7px 15px rgba(76,58,203,.22)}
+  .wizard-step-dot.done{color:#6a5fa8}
+  .wizard-step-dot.done .dot{background:#efe8ff;border-color:#d9cdf1;color:#5b46c9}
+  .wizard-step-dot.done:hover,.wizard-step-dot.next:hover{background:none !important;color:var(--primary)}
+  .wizard-line{display:block;width:34px;background:#eadff3}
+  .wizard-step-dot.done + .wizard-line{background:#c9b8ee}
+
+  /* ---- Page frame: top-aligned, tighter ---- */
+  .main-wrap{padding:6px 24px 40px}
+  .wizard-card{width:min(1080px,100%);background:rgba(255,255,255,.94);border:1px solid rgba(226,211,240,.98);border-radius:26px;box-shadow:var(--shadow-md);padding:24px 32px 26px;animation:stepIn .4s ease both}
+  #step1{width:min(1080px,100%)}
+  .wizard-card.final-card{width:100%;padding:0;border:0;background:transparent;box-shadow:none;border-radius:0}
+  .step-card-top{margin-bottom:16px;padding-bottom:0;border:0}
+  .step-kicker{display:inline-flex;background:none;padding:0;border-radius:0;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#7b5bc7;margin-bottom:6px}
+  .step-title{font-size:30px;color:#4b4960;letter-spacing:-.03em}
+  .step-title span{color:#5c47cd}
+  .step-copy{font-size:14px;color:#7b788d;margin-top:6px}
+  .step-mini-note{background:#faf6ff;border:1px solid #ebdef7;border-radius:12px;padding:8px 12px;color:#948ba4}
+  .step-mini-note::before{content:none}
+
+  /* ---- Forms & buttons (original look) ---- */
+  .field-label{color:#4b4960;margin-bottom:6px}
+  .text-area{min-height:clamp(240px,calc(100vh - 440px),460px);border:1px solid #e5daf1;border-radius:18px;background:#fff;color:#313040}
+  .instruction-area{border:1px solid #e5daf1;border-radius:14px;background:#fff;min-height:96px}
+  .text-area:focus,.instruction-area:focus,.quick-edit-textarea:focus,.overlay-card input[type=text]:focus{border-color:#a795ef;box-shadow:0 0 0 4px rgba(106,70,218,.08)}
+  .hint{color:#8b819b;margin-top:8px}
+  .hint code{background:#f4ecff;color:#5c47cd}
+  .slide-group{background:#fcfaff;border:1px solid #e9def3;border-radius:16px}
+  .slide-toggle{color:#534d63;font-weight:800}
+  #step1 .slide-toggle{padding-bottom:6px}
+  .logo-slot{border:0;background:transparent;padding:0}
+  .logo-pair-grid{gap:10px}
+  input[type=file]{border:1px dashed #dbcee9;background:#fff;border-radius:10px}
+  input[type=file]:hover{border-color:#bca8d9;background:#faf8ff}
+  .s1-grid{gap:20px}
+  .s1-side{gap:12px}
+  .button-row{margin-top:18px;padding-top:16px;border-top:1px solid #eee3f7}
+  .primary-btn,.secondary-btn,.ghost-btn{border-radius:13px;min-height:42px;padding:0 20px;font-size:13px;font-weight:800}
+  .primary-btn{background:linear-gradient(135deg,#4f37c8,#7b5ae8);color:#fff;box-shadow:0 10px 20px rgba(79,55,200,.23)}
+  .primary-btn:hover{background:linear-gradient(135deg,#4f37c8,#7b5ae8);filter:brightness(1.05);transform:translateY(-1px)}
+  .secondary-btn{background:linear-gradient(135deg,#ff5870,#f13b58);color:#fff;box-shadow:0 10px 20px rgba(239,59,88,.2)}
+  .secondary-btn:hover{background:linear-gradient(135deg,#ff5870,#f13b58);filter:brightness(1.05);transform:translateY(-1px)}
+  .ghost-btn{background:#fff;border-color:#dfd3eb;color:#5f596d;box-shadow:none}
+  .ghost-btn:hover{border-color:#bca8d9;color:#5147c6;background:#faf8ff}
+  #trioBtn3,#trioRegenBtn{background:linear-gradient(135deg,#6b3fd6,#c05bd9);color:#fff;border:0;box-shadow:0 10px 20px rgba(139,70,210,.26)}
+  #trioBtn3:hover,#trioRegenBtn:hover{background:linear-gradient(135deg,#6b3fd6,#c05bd9);color:#fff;filter:brightness(1.06)}
+  #trioBtn4{background: none; padding:0; min-height:1px;
+  border: 0;
+  box-shadow: none;
+  color: #5b47c8; margin:0;}
+  .trio-hint{background:#faf7ff;border:1px solid #e8def3;border-left:3px solid #7a55e8;border-radius:12px;color:#736d82;margin-top:10px;padding:9px 13px}
+  .text-link{color:#7d6d96}.text-link:hover{color:#5a43cb}
+
+  /* ---- Steps 2 & 3 ---- */
+  .choice-grid{gap:16px;margin-top:2px}
+  .choice-card{border:1px solid #e6daef;border-radius:20px;padding:18px 20px}
+  .choice-card:hover{border-color:#cab8e0;box-shadow:0 12px 28px rgba(90,68,126,.12)}
+  .choice-card.selected{border:2px solid #5b43ce;box-shadow:0 14px 30px rgba(83,65,199,.16);background:linear-gradient(180deg,#fff,#fbf9ff);padding:17px 19px}
+  .choice-card.selected::after{background:#5b43ce}
+  .choice-icon{width:48px;height:48px;border-radius:16px;background:linear-gradient(145deg,#efe9ff,#f9f2ff);margin-bottom:10px}
+  .choice-title{color:#4e4a62;font-weight:800}
+  .choice-visual{height:92px;margin-top:12px;border:1px dashed #d9cee9;background:#fcfbff}
+  .choice-visual.image .fake-banner{background:linear-gradient(90deg,#4235ba 0 48%,#7c67e6 48% 100%)}
+  .choice-visual.text .fake-text-lines i{background:#c3a9df}.choice-visual.text .fake-text-lines i:nth-child(1){background:#7c58d8}
+  .choice-select{margin-top:12px;border:1px solid #ded4ec;background:#fbf9ff;color:#5b47c8;border-radius:11px;font-weight:800}
+  .choice-card.selected .choice-select{background:linear-gradient(135deg,#4f37c8,#7054df);color:#fff;border-color:transparent}
+  .mode-description{background:#faf7ff;border:1px solid #e8def3;color:#736d82;margin-top:10px}
+  .options-card{border:1px solid #e9def3;border-radius:18px}
+  .banner-tools{border:1px solid #eadff3;background:#fbf9ff;border-radius:14px}
+  .mini-row button{border:1px solid #ddd2ea;color:#4c4958;font-weight:800}
+  .mini-row button.primary{background:linear-gradient(135deg,#4e38c6,#6f53df);color:#fff;border-color:transparent;box-shadow:0 7px 14px rgba(78,56,198,.18)}
+  .review-grid{gap:10px;margin-top:2px}
+  .review-card{background:#fbf9ff;border:1px solid #e9def3;border-radius:16px;padding:13px 15px}
+  .review-card:hover{border-color:#cdb9e6;background:#fff}
+  .review-label{color:#8a7e9a}
+  .review-value{min-height:36px}
+
+  /* ---- Step 4 shared styling ---- */
+  .final-title{font-size:24px;font-weight:850;color:#4a465a;letter-spacing:-.02em}
+  .final-sub{font-size:12.5px;color:#81788d}
+  .final-head .step-kicker{display:none}
+  .final-actions button{border:1px solid #ded2eb;background:#fff;color:#4f4a5b;font-weight:800;font-size:12.5px;border-radius:11px;box-shadow:none}
+  .final-actions button:hover{border-color:#bca8d9;color:#5e49c6;background:#faf8ff}
+  .final-actions #downloadBtn{background:linear-gradient(135deg,#4f37c8,#7b5ae8);border-color:transparent;color:#fff;box-shadow:0 8px 16px rgba(79,55,200,.22)}
+  .final-actions #downloadBtn:hover{filter:brightness(1.05);background:linear-gradient(135deg,#4f37c8,#7b5ae8);color:#fff}
+  .quick-edit-card{background:rgba(255,255,255,.9);border:1px solid #e1d4ee;border-radius:18px;box-shadow:0 10px 28px rgba(84,65,113,.08)}
+  .side-scroll{padding:10px 16px 12px}
+  .side-foot{background:#faf6ff;border-top:1px solid #e9def3;padding:12px 14px}
+  .side-foot .v8-generate{min-height:1px;margin-top:6px;  border:0; background:none; padding:0;font-size: 12px;
+  font-weight: bold;
+  color: #5b47c8;text-align: left;}
+  .side-foot .design-actions{margin-top:6px}
+  .design-actions #refineLink{background:none;border:0; color:#5b47c8}
+  .side-foot .design-actions{gap:6px}
+  .side-foot .design-actions .ghost-btn{min-height:34px;font-size:12px;padding:0 8px}
+  .design-actions #refineLink{order:1}
+  .design-actions #saveGalleryLink{order:2}
+  .design-actions #shuffleLink{ border:0; background:none; min-height:1px; color: #5b47c8; padding:0; text-align:left;}
+  .design-actions #resetLink{ min-height:1px;border-color:transparent;background:transparent;color:#5b47c8; padding: 0;
+  text-align: left;} 
+  .design-actions #resetLink:hover{color:#c43853;}
+  .v8-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6a46da;margin:14px 0 7px;padding-top:12px;border-top:1px solid #efe5f8}
+  .side-foot .design-actions #refineLink:hover, .side-foot .v8-generate:hover, #trioBtn4:hover, .design-actions #shuffleLink:hover{color: #c43853;}
+  .v8-label:first-child{border-top:0;margin-top:0;padding-top:4px}
+  .v8-label small{text-transform:none;letter-spacing:0;font-weight:600;color:#9a90a7}
+  .v8-panel .text-area{min-height:120px}
+  .v8-panel .options-card{background:transparent;border:0;padding:0}
+  .final-toolbar{background:rgba(255,255,255,.82);border:1px solid #e4d8ee;border-radius:15px;padding:7px 10px}
+  .viewport-toggle{background:#f1ebf7;border-radius:10px;padding:3px;gap:3px}
+  .viewport-toggle button{color:#726b7a;font-weight:800;font-size:12.5px;border-radius:8px}
+  .viewport-toggle button.active{background:#fff;color:#373243;box-shadow:0 2px 7px rgba(74,57,92,.08)}
+  .viewport-toggle .trio-view-btn{color:#5b47c8;background:transparent}
+  .viewport-toggle .trio-view-btn::before{background:#d9cdf1}
+  .viewport-toggle .trio-view-btn:hover{background:#efe9ff;color:#4c3acb}
+  .frame-shell{border:1px solid #e4d9ee;border-radius:20px;padding:16px;box-shadow:0 18px 44px rgba(66,43,93,.11);
+    background:radial-gradient(#e7dcf3 1px,transparent 1px) 0 0/18px 18px,#fcfaff}
+  iframe{border-radius:10px;box-shadow:0 10px 34px rgba(66,43,93,.14)}
+  iframe.mobile{box-shadow:0 0 0 8px #2b2640,0 22px 50px rgba(43,38,64,.3)}
+  .code-box{background:#101522}
+  .empty-state{color:#8c839a}
+
+  /* ---- Overlays, loader, 3-emailer window (original tones) ---- */
+  #busyOverlay,.overlay{background:rgba(42,30,52,.46);backdrop-filter:blur(5px)}
+  .busy-card,.overlay-card,.trio-shell{border:1px solid #e4d9ee;box-shadow:0 24px 60px rgba(37,27,51,.25)}
+  .busy-spinner{border-color:#e4d9ee;border-top-color:#6a46da}
+  .toast{background:#2d2a38}
+  .loader-title{color:#61459f}.loader-sub{color:#7d6d97}
+  .progress-track{background:#e7d9f6;height:12px}
+  .progress-fill{background:linear-gradient(90deg,#7040bc,#9b6ce4,#7040bc)}
+  .loader-percent{color:#7040bc}
+  .startup-checks{background:rgba(255,255,255,.85);border-color:#e6daef}
+  .trio-card{background:#fbf9ff;border:1px solid #e6daef}
+  .trio-num{color:#7b5bc7}
+  .trio-chips span{background:#efe9ff;color:#5b47c8}
+  .trio-state.banner,.trio-state.email{color:#5b47c8}
+
+  /* ---- Page scrollbar: always visible on the right edge of the viewport ---- */
+  html{overflow-y:scroll;scrollbar-gutter:stable}
+  ::-webkit-scrollbar{width:13px;height:13px}
+  ::-webkit-scrollbar-track{background:#f1e4fb}
+  ::-webkit-scrollbar-thumb{background:#c4b1ea;border-radius:10px;border:3px solid #f1e4fb}
+  ::-webkit-scrollbar-thumb:hover{background:#a58fdc}
+  ::-webkit-scrollbar-corner{background:#f1e4fb}
+
+  /* ---- Step 4 on desktop: sidebar pinned on the LEFT, the page scrolls normally on the right ---- */
+  @media(min-width:1101px){
+    .app-shell.ws-active .main-wrap{padding:0;min-height:0}
+    .app-shell.ws-active .wizard-stage{width:100%;max-width:none;margin:0;display:block;min-height:0}
+    #step4.active{display:grid;grid-template-columns:336px minmax(0,1fr);grid-template-rows:auto auto 1fr;min-height:calc(100vh - 72px)}
+    #step4 .final-layout{display:contents}
+    #step4 .quick-edit-card{grid-column:1;grid-row:1 / 4;position:sticky;top:0;align-self:start;margin:0;
+      height:var(--side-h,calc(100vh - 72px));max-height:none;min-height:0;
+      border:0;border-right:1px solid #e1d4ee;border-radius:0;box-shadow:6px 0 24px -12px rgba(84,65,113,.18);background:rgba(255,255,255,.82);backdrop-filter:blur(6px)}
+    #step4 .final-head{grid-column:2;grid-row:1;margin:0;padding:14px 24px 0}
+    #step4 .edit-banner{grid-column:2;grid-row:2;margin:8px 24px 0}
+    #step4 .final-preview-column{grid-column:2;grid-row:3;padding:10px 24px 28px;min-width:0}
+    #step4 .final-toolbar{position:sticky;top:8px;z-index:6;margin-bottom:12px;backdrop-filter:blur(8px);background:rgba(255,255,255,.92)}
+    #step4 .frame-shell{min-height:0;overflow:visible;align-items:flex-start}
+    #step4 iframe{min-height:480px}
+  }
+
+
+  /* ---- Toolbar buttons: icon immediately before its label, aligned on one line ---- */
+  .viewport-toggle button{display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1;white-space:nowrap}
+  .viewport-toggle button .vt-ico{flex:none;display:block;width:16px;height:16px}
+  .viewport-toggle button span{display:block;line-height:1}
+
+
+  /* ---- Mailer toolbar: [← Back to Review] | [Desktop Mobile Code] | [Edit Copy Download] ---- */
+  .final-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 10px}
+  .final-toolbar .status{display:none}                              /* no status line in the toolbar */
+  #finalLeftStatus:not(.error){display:none}                        /* sidebar status only surfaces errors */
+  .tb-sep{flex:none;width:1px;height:24px;background:#e4d8ee}
+  .tb-sep-end{margin-left:auto}
+  .tb-back,.tb-icon,.tb-save{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;border-radius:11px;font-family:inherit;font-size:12.5px;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer;
+    border:1px solid #ded2eb;background:#fff;color:#4f4a5b;transition:border-color .15s,color .15s,background .15s,transform .15s,box-shadow .15s}
+  .tb-back{padding:0 14px}
+  .tb-icon{width:38px;padding:0}
+  .tb-back:hover,.tb-icon:hover{border-color:#bca8d9;color:#5e49c6;background:#faf8ff}
+  .tb-ico{flex:none;display:block}
+  .tb-actions{display:flex;align-items:center;gap:8px}
+  .tb-icon.tb-primary{background:linear-gradient(135deg,#4f37c8,#7b5ae8);border-color:transparent;color:#fff;box-shadow:0 8px 16px rgba(79,55,200,.22)}
+  .tb-icon.tb-primary:hover{filter:brightness(1.07);background:linear-gradient(135deg,#4f37c8,#7b5ae8);color:#fff;transform:translateY(-1px)}
+  .tb-icon.on{border-color:#16a34a;color:#15803d;background:#f0fdf4}
+  .tb-save{padding:0 14px;background:#16a34a;border-color:#16a34a;color:#fff;box-shadow:0 6px 14px rgba(22,163,74,.24)}
+  .tb-save:hover{filter:brightness(1.06)}
+  .viewport-toggle button{min-width:40px;height:32px;padding:0 10px}
+  .viewport-toggle .trio-view-btn::before{display:none}
+  @media(max-width:600px){.final-toolbar{gap:8px}.tb-sep-end{margin-left:0}}
+
+
+  /* ---- Header icon buttons (Gallery, Settings) ---- */
+  .hdr-btn{width:38px;height:38px;padding:0;justify-content:center;gap:0}
+  .hdr-btn svg{width:18px;height:18px}
+  .top-actions{gap:8px}
+
+  /* ---- Sidebar: Refine + Try a different design share one row, 50% each minus half the gap ---- */
+  .side-foot .design-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .side-foot .design-actions #refineLink{grid-column:auto;order:0;min-height:1px;height:auto;padding:0px;line-height:1.2;white-space:normal;text-align:left}
+  
+  
+  #generateBtn4{ min-height:32px; background:linear-gradient(135deg,#ff5870,#f13b58);
+  color: #fff; border-radius:8px;
+  padding: 0 20px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;letter-spacing: 0.01em;}
+  
+  #finalMultiSettings{width:305px;}
+  
+  .trioCountBox {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 6px;
+}
+
+  /* ---- Responsive ---- */
+  @media(max-width:900px){
+    .topbar{height:66px;gap:10px;padding:0 14px}
+    .wizard-line{width:14px}
+    .main-wrap{padding:4px 12px 36px}
+    .wizard-card{padding:20px 18px;border-radius:22px}
+    .step-title{font-size:25px}
+    :root{--logo-h:60px}
+  }
+  @media(max-width:600px){
+    :root{--logo-h:48px}
+    .topbar{gap:6px;padding:0 10px}
+    .topbrand{flex:none}
+    .wizard-nav{gap:5px}.wizard-line{width:8px}
+    .hdr-btn{width:34px;height:34px}.top-actions{gap:6px}
+    .step-title{font-size:22px}
+    .final-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
+    .final-actions button{white-space:nowrap;padding:0 8px;justify-content:center}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <header class="topbar">
+    <div class="topbrand"><img src="logo.png" alt="Text to Mailer"></div>
+    <div class="wizard-nav" aria-label="Mailer creation steps">
+      <div class="wizard-step-dot active" id="stepNav1"><span class="dot">1</span><span>Content</span></div><div class="wizard-line"></div>
+      <div class="wizard-step-dot" id="stepNav2"><span class="dot">2</span><span>Banner</span></div><div class="wizard-line"></div>
+      <div class="wizard-step-dot" id="stepNav3"><span class="dot">3</span><span>Review</span></div><div class="wizard-line"></div>
+      <div class="wizard-step-dot" id="stepNav4"><span class="dot">4</span><span>Mailer</span></div>
+    </div>
+    <div class="top-actions">
+      <button id="galleryBtn" class="hdr-btn" onclick="openGallery()" title="Gallery" aria-label="Gallery — saved mailers"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+      <button id="settingsBtn" class="hdr-btn" onclick="openSettings()" title="Settings" aria-label="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="6" r="2"/><path d="M4 6h10M18 6h2"/><circle cx="9" cy="12" r="2"/><path d="M4 12h3M11 12h9"/><circle cx="14" cy="18" r="2"/><path d="M4 18h8M16 18h4"/></svg></button>
+    </div>
+  </header>
+
+
+  <main class="main-wrap">
+    <div class="wizard-stage">
+      <!-- STEP 1 -->
+      <section class="loader-card active" id="loadingScreen">
+        <img class="loader-logo" src="logo.png" alt="Text to Mailer">
+        <div class="loader-title">Preparing your workspace</div>
+        <div class="loader-sub">Loading… <span id="loaderPercent">0%</span> done</div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="startup-checks">
+          <div class="startup-check" id="ai2StartupCheck"><span class="startup-dot"></span><span>Ai-2 key: checking…</span></div>
+          <div class="startup-check" id="ai1StartupCheck"><span class="startup-dot"></span><span>Ai-1 session: checking…</span></div>
+        </div>
+        <div class="loader-percent">TEXT → DESIGN → HTML</div>
+      </section>
+
+      <!-- STEP 2 -->
+      <section class="wizard-card" id="step1">
+        <div class="step-card-top">
+          <div><div class="step-kicker">Step 1 of 4</div><h1 class="step-title">Paste your <span>email content</span></h1><p class="step-copy">Bring any raw campaign copy, announcement, newsletter, product list or notes. The tool will shape it into an email-ready structure.</p></div>
+          <div class="step-mini-note">Content is kept in this browser session</div>
+        </div>
+        <div class="s1-grid"><div class="s1-main">
+        <div class="field-label">Email content <small>Paste anything — no formatting needed</small></div>
+        <div class="input-wrap" id="inputWrap">
+          <textarea id="rawText" class="text-area" placeholder="Paste anything: a newsletter, an announcement, a product list, plain notes... no special formatting needed.">Explore Top Life Science Programs at Adamas University
+NEET 2026 Results Are Out
+Didn't get the outcome you expected, or looking for exciting career opportunities beyond MBBS?
+Explore industry-oriented Bio & Life Science programs at Adamas University for the 2026 Academic Session.
+Featured Programs
+B.Sc Nursing
+Comprehensive clinical training with strong industry exposure.
+Know More
+B.Sc (Microbiology)
+Build expertise in microbiology, biotechnology, and biomedical research.
+Know More
+B.Sc (Applied Statistics & Data Science)
+Learn data analytics, AI fundamentals, and statistical modeling for healthcare and beyond.
+Know More</textarea>
+          <div class="hint">Use <code>{banner}...{/banner}</code> when you want exact control of the hero/banner message. That block is used only for the hero content.</div>
+        </div>
+        <div class="options-card brand-site-card" id="brandSiteCard">
+          <div class="field-label">Brand website for colours <small>optional</small></div>
+          <input id="brandWebsiteUrl" type="url" placeholder="https://adamasuniversity.ac.in/" aria-describedby="brandSiteHint">
+          <div id="brandSiteHint" class="hint">The tool can extract the site's main brand colours automatically. A URL included in your content or instructions is also detected.</div>
+          <div id="brandSiteStatus" class="hint brand-site-status" aria-live="polite"></div>
+        </div>
+        </div>
+        <aside class="s1-side">
+        <div class="slide-group">
+          <button class="slide-toggle" id="step2LogosToggle" onclick="toggleSlidePanel('step2LogosPanel','step2LogosToggle')">
+            <span>Top logos <span style="font-weight:600;color:#9a90a7">(optional)</span></span><span class="chevron">⌄</span>
+          </button>
+          <div class="slide-panel" id="step2LogosPanel">
+            <div class="options-card" id="logosCard">
+              <div class="logo-pair-grid">
+                <div class="logo-slot"><div class="logo-slot-title">Top Left Logo</div><div id="logoLeftPreviewWrap" class="logo-preview-wrap" style="display:none"><img id="logoLeftPreview" class="logo-preview-img"><span class="text-link" onclick="removeLogo('left')">Remove</span></div><input type="file" id="logoLeftInput" accept="image/*" onchange="handleLogoUpload(event,'left')"></div>
+                <div class="logo-slot"><div class="logo-slot-title">Top Right Logo</div><div id="logoRightPreviewWrap" class="logo-preview-wrap" style="display:none"><img id="logoRightPreview" class="logo-preview-img"><span class="text-link" onclick="removeLogo('right')">Remove</span></div><input type="file" id="logoRightInput" accept="image/*" onchange="handleLogoUpload(event,'right')"></div>
+              </div>
+              <div class="hint">The selected logos are placed inside the final email at the top, aligned left and right.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-group">
+          <button class="slide-toggle" id="step2InstructionsToggle" onclick="toggleSlidePanel('step2InstructionsPanel','step2InstructionsToggle')">
+            <span>Instructions <span style="font-weight:600;color:#9a90a7">(optional)</span></span><span class="chevron">⌄</span>
+          </button>
+          <div class="slide-panel" id="step2InstructionsPanel">
+            <div class="options-card" id="instructionsCard">
+              <textarea id="instructionField" class="instruction-area" placeholder="e.g. Use a deep navy theme with gold accents\nMake the program blocks side-by-side cards\nMake it feel premium and minimal"></textarea>
+              <div class="hint">Describe theme, colors, layout, block design or tone. Leave blank for the default direction.</div>
+            </div>
+          </div>
+        </div>
+        </aside></div>
+
+        <div class="button-row"><button class="primary-btn" onclick="goToBannerStep()" style="margin-left:auto">Continue to Banner Options →</button></div>
+      </section>
+
+      <!-- STEP 3 -->
+      <section class="wizard-card" id="step2">
+        <div class="step-card-top">
+          <div><div class="step-kicker">Step 2 of 4</div><h1 class="step-title">Choose your <span>hero style</span></h1><p class="step-copy">Select whether the email should lead with a visual banner or a text-first hero.</p></div>
+          <div class="step-mini-note">You can change this before generating</div>
+        </div>
+
+        <div class="choice-grid">
+          <div class="choice-card selected" id="bannerChoiceImage" onclick="selectBannerMode('image')">
+            <div class="choice-icon">🖼️</div><div class="choice-title">Image-based Banner</div><div class="choice-sub">Use a generated or uploaded visual as the email hero.</div>
+            <div class="choice-visual image"><div class="fake-banner"></div></div>
+            
+          </div>
+          <div class="choice-card" id="bannerChoiceText" onclick="selectBannerMode('text')">
+            <div class="choice-icon">✍️</div><div class="choice-title">Text-based Hero</div><div class="choice-sub">Keep the hero visual-free and let the headline lead with typography and layout.</div>
+            <div class="choice-visual text"><div class="fake-text-lines"><i></i><i></i><i></i><i></i></div></div>
+            
+          </div>
+        </div>
+        <div class="mode-description" id="bannerModeDescription">Create a visual hero banner using Ai-1 or upload your own image.</div>
+
+        <div id="imageBannerPanel" class="options-card">
+          <div class="options-title">Hero image controls</div>
+          <div class="banner-tools" id="bannerToolsCard" style="margin-top:0">
+            <div class="banner-mini-head">Choose how the hero visual is created</div>
+            <div class="mini-row">
+              <button id="chatgptBannerBtn" class="primary" onclick="generateChatGPTBanner()">✨ Ai-1 — Generate Image</button>
+              <button onclick="clearBanner()">Remove</button>
+            </div>
+            <div class="hint">Ai-1 creates the hero image through the connected Edge session. The saved banner is resized to max 650px wide and compressed below 1 MB.</div>
+            <input type="file" id="bannerInput" accept="image/*" onchange="handleBannerUpload(event)">
+            <div id="bannerPreviewWrap" class="banner-preview"><img id="bannerPreview" alt="Banner preview"><span class="banner-badge">✓ Banner ready — will be inserted into the hero</span></div>
+            <div id="bannerStatus" class="hint"></div>
+          </div>
+        </div>
+
+        <div class="button-row"><button class="ghost-btn" onclick="showStep(1)">← Back</button><button class="secondary-btn" onclick="goToReviewStep()">Continue to Review →</button></div>
+        <div class="status" id="parseStatus"></div>
+        <div class="genlog"><div class="genlog-title">⚠️ Issues during generation</div><textarea readonly></textarea><div class="text-link" style="margin-top:7px" onclick="copyGenLog()">Copy this text</div></div>
+      </section>
+
+      <!-- STEP 3 -->
+      <section class="wizard-card" id="step3">
+        <div class="step-card-top">
+          <div><div class="step-kicker">Step 3 of 4</div><h1 class="step-title">Review &amp; <span>generate</span></h1><p class="step-copy">Review your content, hero choice, logos and optional instructions before generating the final emailer.</p></div>
+          <div class="step-mini-note">You can go back and change anything</div>
+        </div>
+        <div class="review-grid">
+          <div class="review-card"><div class="review-label">Email content</div><div id="reviewContentPreview" class="review-value">—</div></div>
+          <div class="review-card"><div class="review-label">Hero</div><div id="reviewHeroPreview" class="review-value">—</div></div>
+          <div class="review-card"><div class="review-label">Top logos</div><div id="reviewLogoPreview" class="review-value">—</div></div>
+          <div class="review-card"><div class="review-label">Instructions</div><div id="reviewInstructionsPreview" class="review-value">—</div></div>
+          <div class="review-card"><div class="review-label">Brand colour source</div><div id="reviewBrandPalettePreview" class="review-value">Automatic palette</div></div>
+        </div>
+        <div class="button-row"><button class="ghost-btn" onclick="showStep(2)">← Back to Banner</button><button class="secondary-btn" id="generateBtn" onclick="generateMailer(true)">✨ Generate Mailer</button></div>
+        <div class="multi-gen-card" id="multiGenReviewCard">
+          <label class="multi-gen-toggle"><input type="checkbox" id="multiMailerEnabled" onchange="toggleMultiMailerSettings()"><span><b>Generate multiple unique emailers</b><small>Optional — generate variations instead of just one emailer.</small></span></label>
+          <div class="multi-gen-settings" id="multiMailerSettings" style="display:none">
+            <label for="trioCount3">Number of unique emailers <small>Maximum 4</small></label>
+            <select id="trioCount3" onchange="syncTrioCount(this.value)"><option value="2">2 emailers</option><option value="3" selected>3 emailers</option><option value="4">4 emailers (max)</option></select>
+            <button class="primary-btn" id="trioBtn3" onclick="startTrioFromReview()">🎨 Generate Variations</button>
+          </div>
+          <div class="trio-hint">Each variation uses a different layout, typography, shape language and banner direction. The normal “Generate Mailer” option remains the default.</div>
+        </div>
+        <div class="status" id="reviewStatus"></div>
+        <div class="genlog"><div class="genlog-title">⚠️ Issues during generation</div><textarea readonly></textarea><div class="text-link" style="margin-top:7px" onclick="copyGenLog()">Copy this text</div></div>
+      </section>
+
+      <!-- STEP 4 -->
+      <section class="wizard-card final-card" id="step4">
+        <div id="editModeBanner" class="edit-banner">Edit mode on — click any text in the preview and type to change it, then click Save.</div>
+        <div class="final-layout">
+          <aside class="quick-edit-card v8-panel">
+            <div class="side-scroll">
+            <div class="v8-label">1. Paste Any Text</div><div id="s4SlotText"></div>
+            <div class="v8-label">Brand Palette <small>optional</small></div><div id="s4SlotBrandSite"></div>
+            <div class="v8-label">2. Top Logos <small>optional</small></div><div id="s4SlotLogos"></div>
+            <div class="v8-label">3. Banner Image <small>optional</small></div><div id="s4SlotBanner"></div>
+            <div class="v8-label">4. Instructions <small>optional</small></div><div id="s4SlotInstr"></div>
+            <div class="hint">Tell the AI anything — theme, colors, layout, block design, tone. Leave blank for a clean default design. After generating, add a new instruction and click <b>Refine current design</b> to tweak the current email, or <b>Generate New Design</b> for a fresh layout.</div>
+            </div>
+            <div class="side-foot">
+            <div class="btnAnchor">
+            <button class="v8-generate" id="generateBtn4" onclick="generateMailer(true)">Generate New Design →</button>
+            </div>            
+            <div class="design-actions">
+            <button class="ghost-btn" id="refineLink" style="display:none" onclick="refineCurrent()">&asymp; Refine Current</button>
+            <button class="ghost-btn v8-generate" id="trioBtn4" onclick="toggleFinalMultiOptions()">&equiv; Generate Variation(opt)</button>
+            <div class="multi-gen-settings final-multi-settings" id="finalMultiSettings" style="display:none">
+              <label for="trioCount4">Number of unique emailers <small>(Maximum 4)</small></label>
+              <div class="trioCountBox">
+              <select id="trioCount4" onchange="syncTrioCount(this.value)"><option value="2">2 emailers</option><option value="3" selected>3 emailers</option><option value="4">4 emailers (max)</option></select>
+              <button class="secondary-btn" onclick="startTrioFromFinal()">Generate</button>
+              </div>
+            </div>
+            
+            </div>
+            <div class="design-actions">
+            <button class="ghost-btn" id="shuffleLink" style="display:none" onclick="differentDesign()">&raquo; Try different</button>
+            <button class="ghost-btn" id="resetLink" style="display:none" onclick="startOver()">&otimes; Start over</button>
+            </div>
+            <div class="status" id="finalLeftStatus"></div>
+            <div class="genlog"><div class="genlog-title">⚠️ Issues during generation</div><textarea readonly></textarea><div class="text-link" style="margin-top:7px" onclick="copyGenLog()">Copy this text</div></div>
+            </div>
+            
+          </aside>
+          <div class="final-preview-column">
+<div class="final-toolbar" role="toolbar" aria-label="Preview and export">
+  <button class="tb-back" onclick="showStep(3)" title="Back to Review"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span>Back to Review</span></button>
+  <span class="tb-sep" aria-hidden="true"></span>
+  <div class="viewport-toggle" role="group" aria-label="Preview mode">
+    <button id="btnDesktop" class="active" title="Desktop preview" aria-label="Desktop preview"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+    <button id="btnMobile" title="Mobile preview" aria-label="Mobile preview"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg></button>
+    <button id="btnCode" title="HTML code" aria-label="HTML code"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></button>
+    <button class="trio-view-btn" style="display:none" onclick="openTrio()" title="View generated designs" aria-label="View generated designs"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg></button>
+  </div>
+  <span class="tb-sep tb-sep-end" aria-hidden="true"></span>
+  <div class="tb-actions">
+    <button id="editTextBtn" class="tb-icon" onclick="toggleTextEdit()" title="Edit text" aria-label="Edit text"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    <button id="saveEditBtn" class="tb-save" onclick="saveTextEdit()" style="display:none" title="Save edits" aria-label="Save edits"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Save</span></button>
+    <button id="copyBtn" class="tb-icon" title="Copy HTML" aria-label="Copy HTML"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button id="saveGalleryLink" class="tb-icon" onclick="saveToGallery()" title="Save to Gallery" aria-label="Save to Gallery"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg></button>
+    <button id="downloadBtn" class="tb-icon tb-primary" title="Download .html" aria-label="Download .html"><svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+  </div>
+  <div class="status" id="finalStatus"></div>
+</div>
+<div class="frame-shell"><iframe id="previewFrame" style="display:none"></iframe><textarea class="code-box" id="codeBox" readonly></textarea><div class="empty-state" id="emptyState">Your generated emailer will appear here.</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="busyOverlay"><div class="busy-card"><div class="busy-spinner"></div><div id="busyOverlayMsg"></div></div></div>
+
+<div id="trioOverlay" class="overlay">
+  <div class="trio-shell">
+    <div class="trio-head">
+      <div><div class="trio-title" id="trioTitleText">🎨 Unique Emailers</div><div class="trio-sub" id="trioSub">Preparing…</div></div>
+      <div class="trio-head-actions">
+        <button class="ghost-btn" id="trioCancelBtn" onclick="cancelTrio()" style="display:none">Stop</button>
+        <button class="ghost-btn" id="trioRegenBtn" onclick="startTrio()">🔄 Regenerate all</button>
+        <span class="close-x" onclick="closeTrio()" title="Close (generation keeps running)">×</span>
+      </div>
+    </div>
+    <div class="trio-notice" id="trioNotice"></div>
+    <div class="trio-grid" id="trioGrid"></div>
+  </div>
+</div>
+
+<div id="settingsOverlay" class="overlay">
+  <div class="overlay-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h3 style="margin:0;font-size:17px;font-weight:700;color:var(--ink)">Ai-2 — Email Code Generation</h3><span class="close-x" onclick="closeSettings()">&times;</span></div>
+    <p>Ai-1 generates the image. Ai-2 generates the email HTML. The Ai-2 key stays in this browser's local storage.</p>
+    <input type="text" id="apiKeyInput" placeholder="Paste your Ai-2 API key">
+    <div id="settingsStatus" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+    <div style="display:flex;gap:10px;margin-top:18px"><button class="primary-btn" onclick="saveSettings()" style="flex:1">Save</button><button class="ghost-btn" onclick="closeSettings()">Cancel</button></div>
+    <div id="clearKeyLink" class="text-link" style="display:none;text-align:center;margin-top:14px" onclick="clearApiKey()">Remove saved key</div>
+  </div>
+</div>
+
+<div id="galleryOverlay" class="overlay">
+  <div class="overlay-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><h3 style="margin:0;font-size:17px;font-weight:700;color:var(--ink)">Saved Mailers</h3><span class="close-x" onclick="closeGallery()">&times;</span></div>
+    <p style="margin:6px 0 10px">Saved in this browser only. Click a mailer to load it back into the editor and continue refining it.</p>
+    <div id="galleryList" class="gallery-list"></div>
+  </div>
+</div>
+
+<script>
+
+let currentHtml = null; // last generated full email HTML, kept as design context for follow-up instructions
+let lastArchetype = null; // avoid repeating the same style back-to-back on shuffle
+
+/* ============ DESIGN VARIETY ENGINE ============
+   Every fresh generation is assembled from four independent dimensions, so two emails
+   rarely look alike:  layout archetype  x  colour palette  x  typography  x  shape language.
+   A "shuffle bag" is used for layouts (every layout is used before any repeats) and a recent-history
+   filter for palettes/fonts/shapes. State is kept in localStorage so it survives page reloads. */
+const STYLE_ARCHETYPES = [
+  { tone:'bold', fonts:['display','sans'], text:`BOLD POSTER: a saturated full-bleed colour body like a social-media poster. A small light "kicker" word sits above a GIANT oversized heavy headline (the headline itself is the main visual, white or very light on the saturated colour). Below it a bordered rounded outline box holds a tick-mark (✓) feature list, with a round "stamp/seal" callout (bordered circle, e.g. an offer or number) sitting on the box edge. A slim contact strip (phone / location / website) sits at the bottom next to one pill CTA. Hero image, if supplied, sits above the headline; otherwise the giant type is the hero.` },
+  { tone:'light', fonts:['sans'], text:`CLEAN CORPORATE AIRY: near-white background, generous whitespace, centred logo. Two-line headline: line one in deep navy, line two in a bright accent colour, both heavy uppercase. A thin dashed divider, one calm subhead line, then a THREE-COLUMN feature trio — each column has a soft-tinted circle with an emoji/glyph icon, an uppercase bold label, a short accent underline dash and two lines of grey copy, columns separated by hairline vertical dividers. A single dark rounded-pill CTA closes the email.` },
+  { tone:'light', fonts:['sans','serif'], text:`ILLUSTRATION NEWSLETTER: a white 600px column on a light-grey outer background. A thin, light-weight centred headline, a centred hero visual, a short centred paragraph and a flat rectangular button. Then one large saturated rounded panel containing STACKED ROWS, each with a white glyph icon on the left, a "↗" arrow at the top-right, a light heading and small body text. Follow with a two-column block (rounded colour tile with visual on the left, accent-coloured heading + text + button on the right), a row of social text-icons, a hairline rule and a small centred footer.` },
+  { tone:'bold', fonts:['sans','display'], text:`PHOTO HERO + COLOUR PANEL: the hero image (or a big colour block) spans the full width at the top with nothing over it. Directly beneath, a solid saturated colour panel starts with a straight edge and carries a HUGE two-line white headline, a pill-shaped subtitle chip (with a small emoji at its right) and one prominent CTA. Very few sections — confident, sparse and poster-like. Tiny logo top-left.` },
+  { tone:'light', fonts:['sans','display'], text:`MODERN FLYER MODULES: a clean white "paper" layout. Headline mixes weights (one light line, one extra-bold line, one small line). Every section heading is uppercase with a thick vertical accent bar to its left. A full-width strip of FOUR equal coloured tiles (each with a small icon glyph, a label and two tiny lines) runs across the middle. Below: a two-column "HOW WE WORK" area (heading left, paragraph right), a "GET IN TOUCH" contact block, then a slim dark footer bar.` },
+  { tone:'light', fonts:['sans'], text:`SOFT CARD STACK: light neutral or cream background, centred logo. The headline sits on two stacked angled "ribbon" shapes in two contrasting solid colours (like torn banner tape). Each content item is its own white rounded card in a vertical stack with a soft shadow — title and description on the left, a solid pill button on the right.` },
+  { tone:'dark', fonts:['serif'], text:`DARK LUXE: near-black or very deep background, a thin champagne/gold hairline frame and thin gold dividers. A small letter-spaced uppercase eyebrow, an elegant serif headline, generous padding. Items are presented as refined rows separated by hairlines with small caps titles. CTAs are thin OUTLINED rectangular buttons (no fill), never pills. Quiet, premium, restrained.` },
+  { tone:'any', fonts:['sans','serif'], text:`ZIGZAG SPLIT ROWS: a strong colour-block header with the logo and headline. Content then alternates left/right in full-width rows: on one row a solid colour block (with a big glyph/number) on the left and text on the right, on the next row swapped. Sharp square corners, high contrast, one rectangular CTA per row.` },
+  { tone:'any', fonts:['display','sans'], text:`NUMBERED STEPS: the visual anchor is BIG numerals (01, 02, 03 …) in the accent colour, set in a very large weight beside each item, joined by a thin vertical line. Header is a simple bold headline on a flat colour band. Each step has a short bold title and a line of copy; one solid CTA at the end plus a small "need help?" line.` },
+  { tone:'bold', fonts:['sans','display'], text:`STAT HIGHLIGHT: a gradient-feel (use a solid fallback colour) header with a bold headline, then a floating white rounded card that overlaps the header edge and holds a THREE-UP row of large stat numbers/keywords with small captions beneath. Below that, compact two-column grid tiles for the items, each with a coloured dot and a short line. Rounded buttons.` },
+  { tone:'light', fonts:['display','sans'], text:`PLAYFUL STICKER: warm off-white background, thick black outlines on every box, flat bright colours and "hard offset shadows" (a solid dark block offset behind boxes, done with nested tables/borders). Chunky rounded buttons with black borders, a few emoji accents and tilted-feeling label chips. Fun, energetic, youthful — but still readable.` },
+  { tone:'light', fonts:['serif'], text:`MAGAZINE FEATURE: single narrow column, lots of margin. Small-caps section label, a large serif headline, an oversized drop-cap on the first paragraph, and a pull-quote with a thick side rule in the accent colour. Items appear as short numbered "features" with thin dividers. CTA is an underlined serif text link plus one subtle button.` },
+  { tone:'any', fonts:['sans'], text:`PROGRAM GRID: a compact header, then a 2×2 (or 2×3) grid of coloured square-ish tiles — each tile a different tint from the palette, with a glyph, a bold title and one line of copy. Under the grid, a full-width banded "key facts" strip and one wide CTA. Tight, information-dense, dashboard-like.` },
+  { tone:'bold', fonts:['display','sans'], text:`URGENT ALERT: a full-width bold saturated header (red, orange or crimson) with the logo, an all-caps urgency headline and a large callout line (deadline or number). A high-contrast CTA sits directly in the header. Below on a soft tinted background use white rows with small circular icon bullets, then a bold one-line reminder and a second CTA, then a muted footer.` },
+  { tone:'any', fonts:['sans','serif'], text:`MINIMAL EDITORIAL: lots of whitespace, a small uppercase eyebrow, one large bold headline and one or two lines of understated copy. Items are a simple stacked list separated by thin hairline dividers (no cards, no shadows): bold title, one line of description and a small text-style arrow link. Restrained, almost no colour except one sparing accent.` }
+];
+
+const COLOR_PALETTES = [
+  { tone:'bold',  text:'vivid red #E4262F primary, deep crimson #B3151E shade, pure white text, pale-pink #FFF1F1 tint, gold #F5B800 highlight' },
+  { tone:'bold',  text:'royal blue #2456E5 primary, bright sky #38A8FF accent, white text, ice #EAF2FF tint' },
+  { tone:'bold',  text:'hot orange #F7841E primary, burnt orange #E5601B shade, charcoal #23262B text, warm white #FFF8F0 background' },
+  { tone:'bold',  text:'electric purple #7B4DFF primary, mint #7DF0D0 accent, white text, lavender #F1ECFF tint' },
+  { tone:'bold',  text:'emerald #0E9F6E primary, lime #C6F135 accent, deep forest #08392B text on light, off-white #F6FBF8 background' },
+  { tone:'bold',  text:'magenta #E01E84 primary, sunrise orange #FF8A3D accent, white text, blush #FFF0F6 tint' },
+  { tone:'light', text:'white background, deep navy #0B2A5B headings, bright cyan-blue #0E9BEA accent, cool grey #6B7A90 body text' },
+  { tone:'light', text:'cream #FBF6EC background, forest green #1F4D3A primary, mustard #D9A21B accent, dark brown #3A2E22 text' },
+  { tone:'light', text:'off-white #F7F7F5 background, charcoal #1D1D1F text, single coral #FF5A4F accent used sparingly' },
+  { tone:'light', text:'soft grey #EEF0F3 outer background, white content column, teal #0F8B8D primary, warm coral #FF7F6B accent' },
+  { tone:'light', text:'warm off-white #FFF9F2, terracotta #C8553D primary, sage #A3B18A secondary, deep aubergine #3D2645 text' },
+  { tone:'light', text:'white background, tangerine #FF8A00 primary, slate #2F3B4C text, light-peach #FFF0DE tint' },
+  { tone:'dark',  text:'near-black #0E0E12 background, champagne gold #C9A24B accent and hairlines, ivory #F4EFE6 text' },
+  { tone:'dark',  text:'deep midnight navy #0A1330 background, electric cyan #22D3EE accent, white text, muted slate #8FA3C7 secondary text' },
+  { tone:'dark',  text:'deep plum #24102E background, hot pink #FF4FA3 accent, soft lilac #E8D9FF text' },
+  { tone:'dark',  text:'charcoal #16181D background, neon lime #B6F500 accent, white text' }
+];
+
+/* Web-safe / email-safe font stacks only (Gmail & Outlook ignore most web fonts), grouped by character. */
+const FONT_PAIRINGS = [
+  { kind:'sans',    text:`Headings: 'Trebuchet MS', 'Helvetica Neue', Arial, sans-serif (bold). Body: Verdana, Geneva, sans-serif.` },
+  { kind:'sans',    text:`Headings: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif (bold). Body: 'Segoe UI', Roboto, Arial, sans-serif.` },
+  { kind:'sans',    text:`Headings: Tahoma, Geneva, Verdana, sans-serif (bold). Body: Tahoma, Geneva, sans-serif.` },
+  { kind:'display', text:`Headings: 'Arial Black', 'Helvetica Neue', Arial, sans-serif (extra-heavy, tight letter-spacing, uppercase). Body: Arial, Helvetica, sans-serif.` },
+  { kind:'display', text:`Headings: Impact, 'Arial Narrow', Haettenschweiler, sans-serif (condensed, uppercase, letter-spacing 1px). Body: 'Trebuchet MS', Arial, sans-serif.` },
+  { kind:'serif',   text:`Headings: Georgia, 'Times New Roman', serif (bold). Body: Georgia, serif.` },
+  { kind:'serif',   text:`Headings: 'Palatino Linotype', Palatino, 'Book Antiqua', serif (regular weight, large). Body: Verdana, Geneva, sans-serif.` },
+  { kind:'serif',   text:`Headings: 'Times New Roman', Times, serif (large, italic accents). Body: Arial, Helvetica, sans-serif.` },
+  { kind:'sans',    text:`Headings: 'Gill Sans', 'Gill Sans MT', Calibri, sans-serif (light/regular, large, generous letter-spacing). Body: Calibri, Candara, Arial, sans-serif.` },
+  { kind:'display', text:`Headings: 'Courier New', Courier, monospace (bold, uppercase, small letter-spaced labels) paired with body Arial, Helvetica, sans-serif — a techy/typewriter feel.` }
+];
+
+/* Shape language: how "soft" or "hard" the components feel. */
+const SHAPE_LANGUAGES = [
+  'sharp square corners everywhere (border-radius 0), thin 1px borders, flat rectangular buttons',
+  'gently rounded corners (8px), subtle 1px borders, medium rectangular-rounded buttons',
+  'generously rounded cards (18–24px) with soft shadows and full pill-shaped buttons',
+  'chunky 2–3px solid dark outlines, small radius (6px), bold buttons with an offset "hard" shadow feel',
+  'no boxes at all — separate content with whitespace and hairline dividers only; text-style links and one solid button',
+  'mixed: one hero shape with a big radius (28px) but everything else crisp square, buttons slightly rounded (4px)'
+];
+
+function ttmLoad(key, fallback){ try{ const v = JSON.parse(localStorage.getItem('ttm_variety_'+key)); return v == null ? fallback : v; }catch(e){ return fallback; } }
+function ttmSave(key, val){ try{ localStorage.setItem('ttm_variety_'+key, JSON.stringify(val)); }catch(e){} }
+
+/* Shuffle bag: returns items in random order, no repeats until every item has been used once,
+   and never the same item twice in a row across a refill. */
+function bagDraw(name, n, allowed){
+  let bag = ttmLoad('bag_'+name, []).filter(i => i < n);
+  const last = ttmLoad('last_'+name, -1);
+  if(allowed){
+    // keep only entries that are permitted; if none left, refill from the permitted set
+    let pool = bag.filter(i => allowed.includes(i));
+    if(!pool.length){
+      pool = allowed.filter(i => i !== last);
+      if(!pool.length) pool = allowed.slice();
+      bag = bag.concat(pool.filter(i => !bag.includes(i)));
+    }
+  }else if(!bag.length){
+    bag = Array.from({length:n}, (_, i) => i).filter(i => i !== last);
+  }
+  const candidates = allowed ? bag.filter(i => allowed.includes(i)) : bag;
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  bag = bag.filter(i => i !== pick);
+  ttmSave('bag_'+name, bag); ttmSave('last_'+name, pick);
+  return pick;
+}
+/* Recent-history pick: avoids the last `memory` picks. */
+function historyDraw(name, n, memory, allowed){
+  const hist = ttmLoad('hist_'+name, []);
+  let pool = (allowed || Array.from({length:n}, (_, i) => i)).filter(i => !hist.includes(i));
+  if(!pool.length) pool = (allowed || Array.from({length:n}, (_, i) => i)).filter(i => i !== hist[hist.length-1]);
+  if(!pool.length) pool = allowed || [0];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  hist.push(pick); while(hist.length > memory) hist.shift();
+  ttmSave('hist_'+name, hist);
+  return pick;
+}
+
+function pickStyle(){
+  const ai = bagDraw('archetype', STYLE_ARCHETYPES.length);
+  const arch = STYLE_ARCHETYPES[ai]; lastArchetype = ai;
+  // palette must suit the layout's tone (a dark-luxe layout should not get a pastel palette)
+  const okPal = COLOR_PALETTES.map((p, i) => (arch.tone === 'any' || p.tone === arch.tone) ? i : -1).filter(i => i >= 0);
+  const pi = historyDraw('palette', COLOR_PALETTES.length, 5, okPal.length ? okPal : null);
+  // font must suit the layout's character
+  const okFont = FONT_PAIRINGS.map((f, i) => arch.fonts.includes(f.kind) ? i : -1).filter(i => i >= 0);
+  const fi = historyDraw('font', FONT_PAIRINGS.length, 4, okFont.length ? okFont : null);
+  const si = historyDraw('shape', SHAPE_LANGUAGES.length, 3, null);
+  return { archetype: arch.text, palette: COLOR_PALETTES[pi].text, fonts: FONT_PAIRINGS[fi].text, shape: SHAPE_LANGUAGES[si] };
+}
+
+/* Read the two most prominent colours out of the banner image so the email colour scheme
+   matches the hero instead of fighting it. Returns [] if it cannot be read. */
+function dominantBannerColors(dataUri){
+  return new Promise(resolve => {
+    try{
+      const img = new Image();
+      img.onload = () => {
+        try{
+          const c = document.createElement('canvas'); const S = 48; c.width = S; c.height = S;
+          const g = c.getContext('2d'); g.drawImage(img, 0, 0, S, S);
+          const d = g.getImageData(0, 0, S, S).data; const buckets = {};
+          for(let i = 0; i < d.length; i += 4){
+            if(d[i+3] < 200) continue;
+            const r = d[i], gr = d[i+1], b = d[i+2];
+            const mx = Math.max(r, gr, b), mn = Math.min(r, gr, b);
+            if(mx > 235 && mn > 225) continue;        // near white
+            if(mx < 30) continue;                     // near black
+            if(mx - mn < 28) continue;                // greys / skin-ish neutrals
+            const key = (r >> 5) + ',' + (gr >> 5) + ',' + (b >> 5);
+            const bk = buckets[key] || (buckets[key] = {n:0, r:0, g:0, b:0});
+            bk.n++; bk.r += r; bk.g += gr; bk.b += b;
+          }
+          const list = Object.values(buckets).sort((a, b) => b.n - a.n).map(b => [Math.round(b.r/b.n), Math.round(b.g/b.n), Math.round(b.b/b.n)]);
+          const hex = c3 => '#' + c3.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+          const dist = (a, b) => Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]);
+          const out = [];
+          for(const col of list){ if(!out.length || dist(col, out[0]) > 120){ out.push(col); } if(out.length === 2) break; }
+          resolve(out.map(hex));
+        }catch(e){ resolve([]); }
+      };
+      img.onerror = () => resolve([]);
+      img.src = dataUri;
+    }catch(e){ resolve([]); }
+  });
+}
+
+function toggleSlidePanel(panelId, toggleId){
+  const panel = document.getElementById(panelId);
+  const toggle = document.getElementById(toggleId);
+  if(!panel || !toggle) return;
+  const open = panel.classList.toggle('open');
+  toggle.classList.toggle('open', open);
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function setStartupCheck(id, state, text){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.className = 'startup-check ' + state;
+  el.innerHTML = '<span class="startup-dot"></span><span>' + text + '</span>';
+}
+
+function showStatus(msg, type){
+  const el = document.getElementById('parseStatus');
+  // Generation is triggered from Step 3 and results land on Step 4, so mirror the
+  // message into every step's status line (only the visible one is seen).
+  ['parseStatus','reviewStatus','finalStatus','finalLeftStatus'].forEach(id => {
+    const box = document.getElementById(id);
+    if(box){ box.textContent = msg; box.className = 'status' + (type ? ' ' + type : ''); }
+  });
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1800);
+}
+let busyDepth = 0;
+function showBusy(msg){
+  busyDepth++;
+  const o = document.getElementById('busyOverlay');
+  document.getElementById('busyOverlayMsg').textContent = msg;
+  o.classList.add('show');
+}
+function updateBusy(msg){
+  document.getElementById('busyOverlayMsg').textContent = msg;
+}
+function hideBusy(){
+  busyDepth = Math.max(0, busyDepth - 1);
+  if(busyDepth === 0) document.getElementById('busyOverlay').classList.remove('show');
+}
+
+/* ---------- Persistent generation log (errors that shouldn't vanish like a toast) ---------- */
+let genLogMessages = [];
+function syncGenLogUi(){
+  const text = genLogMessages.join('\n\n');
+  document.querySelectorAll('.genlog').forEach(box => {
+    box.style.display = genLogMessages.length ? 'block' : 'none';
+    const ta = box.querySelector('textarea'); if(ta) ta.value = text;
+  });
+}
+function clearGenLog(){ genLogMessages = []; syncGenLogUi(); }
+function logGenIssue(msg){ genLogMessages.push(msg); syncGenLogUi(); }
+function copyGenLog(){
+  const text = genLogMessages.join('\n\n');
+  navigator.clipboard.writeText(text).then(()=> showToast('Copied'))
+    .catch(()=>{ const el = document.querySelector('.genlog textarea'); if(el){ el.select(); document.execCommand('copy'); } showToast('Copied'); });
+}
+
+/* ---------- Settings modal / API key (stored only in this browser) ---------- */
+const LS_KEY = 'text_to_mailer_gemini_key';
+
+function getApiKey(){ return (localStorage.getItem(LS_KEY) || '').trim(); }
+
+function openSettings(){
+  document.getElementById('apiKeyInput').value = getApiKey();
+  document.getElementById('settingsStatus').textContent = '';
+  document.getElementById('clearKeyLink').style.display = getApiKey() ? 'block' : 'none';
+  document.getElementById('settingsOverlay').style.display = 'flex';
+}
+function closeSettings(){
+  document.getElementById('settingsOverlay').style.display = 'none';
+}
+function saveSettings(){
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if(!val){
+    document.getElementById('settingsStatus').textContent = 'Paste a key first, or use "Remove saved key".';
+    document.getElementById('settingsStatus').style.color = 'var(--stamp-red)';
+    return;
+  }
+  localStorage.setItem(LS_KEY, val);
+  closeSettings();
+  showToast('API key saved in this browser');
+}
+function clearApiKey(){
+  localStorage.removeItem(LS_KEY);
+  document.getElementById('apiKeyInput').value = '';
+  document.getElementById('clearKeyLink').style.display = 'none';
+  showToast('API key removed');
+}
+
+/* ---------- Direct call to Gemini from the browser (no server) ---------- */
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.5-flash-lite'];
+
+
+async function callGeminiDirect(prompt){
+  const apiKey = getApiKey();
+  if(!apiKey){
+    openSettings();
+    throw new Error('Add your Ai-2 API key in Settings (⚙️) first.');
+  }
+
+  let lastErr = null;
+  for(const model of GEMINI_MODELS){
+    for(let attempt = 1; attempt <= 2; attempt++){
+      try{
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 8192, temperature: 1.0 }
+          })
+        });
+        const data = await resp.json().catch(()=>({}));
+
+        if(!resp.ok){
+          const msg = (data.error && data.error.message) || `status ${resp.status}`;
+          const overloaded = resp.status === 503 || /overloaded|high demand/i.test(msg);
+          if(resp.status === 401 || resp.status === 403){
+            throw new Error(`${msg}\n\nGoogle rejected the API key. Open Settings (⚙️) and double-check it, or generate a fresh one at aistudio.google.com/apikey.`);
+          }
+          if(overloaded && attempt < 2){ await new Promise(r=>setTimeout(r, 2500)); continue; }
+          if(overloaded) break;
+          throw new Error(msg);
+        }
+
+        const candidates = data.candidates || [];
+        if(!candidates.length){
+          const reason = (data.promptFeedback && data.promptFeedback.blockReason) || 'no candidates returned';
+          throw new Error(`Ai-2 did not return a result (${reason}).`);
+        }
+        const parts = (candidates[0].content && candidates[0].content.parts) || [];
+        const text = parts.map(p=>p.text||'').join('').trim();
+        if(!text) throw new Error('Ai-2 returned an empty response.');
+        return text;
+      }catch(err){
+        lastErr = err;
+        if(/reject|Settings|API key/i.test(err.message)) throw err;
+        if(attempt >= 2) break;
+      }
+    }
+  }
+  throw lastErr || new Error('Ai-2 is currently unavailable. Please try again in a moment.');
+}
+
+/* ---------- {Label} | Content tag parsing (single-line, and multi-line {Label}...{/Label} blocks) ---------- */
+function parseTaggedLines(raw){
+  const lines = raw.split(/\n/);
+  const roleHints = [];
+  const imageTags = [];
+  const cleanedLines = [];
+
+  function addTag(label, content){
+    if(/^banner$/i.test(label) || /banner|creative|graphic|visual|photo|picture|hero image/i.test(label)){
+      imageTags.push({ label, content });
+    } else {
+      roleHints.push({ label, content });
+    }
+  }
+
+  let i = 0;
+  while(i < lines.length){
+    const line = lines[i];
+
+    // Single-line: {Label} | Content
+    const singleMatch = line.match(/^\s*\{([^}/][^}]*)\}\s*\|\s*(.*)$/);
+    if(singleMatch){
+      const label = singleMatch[1].trim();
+      const content = singleMatch[2].trim();
+      addTag(label, content);
+      cleanedLines.push(content);
+      i++;
+      continue;
+    }
+
+    // Multi-line block: {Label} on its own line ... {/Label} (or any {/...}) closes it
+    const openMatch = line.match(/^\s*\{([^}/][^}]*)\}\s*$/);
+    if(openMatch){
+      const label = openMatch[1].trim();
+      const blockLines = [];
+      let j = i + 1;
+      while(j < lines.length && !/^\s*\{\/[^}]*\}\s*$/.test(lines[j])){
+        blockLines.push(lines[j]);
+        j++;
+      }
+      const content = blockLines.join(' ').replace(/\s+/g, ' ').trim();
+      addTag(label, content);
+      cleanedLines.push(...blockLines); // keep the multi-line text itself for the AI's raw content
+      i = (j < lines.length) ? j + 1 : j; // skip past the closing tag line
+      continue;
+    }
+
+    cleanedLines.push(line);
+    i++;
+  }
+
+  return { cleanedRaw: cleanedLines.join('\n'), roleHints, imageTags };
+}
+
+/* ---------- Banner workflow: ChatGPT handoff OR local SVG, no image API key ---------- */
+let bannerDataUri = null;
+let bannerSource = null;
+let bannerMode = 'image'; // 'image' = visual banner, 'text' = text-based hero
+
+function selectBannerMode(mode){
+  bannerMode = mode === 'text' ? 'text' : 'image';
+  const imageCard = document.getElementById('bannerChoiceImage');
+  const textCard = document.getElementById('bannerChoiceText');
+  const imagePanel = document.getElementById('imageBannerPanel');
+  if(imageCard) imageCard.classList.toggle('selected', bannerMode === 'image');
+  if(textCard) textCard.classList.toggle('selected', bannerMode === 'text');
+  if(imagePanel) imagePanel.style.display = bannerMode === 'image' ? 'block' : 'none';
+  if(bannerMode === 'text' && bannerDataUri){ clearBanner(); }
+  const desc = document.getElementById('bannerModeDescription');
+  if(desc){
+    desc.textContent = bannerMode === 'image'
+      ? 'Create a visual hero banner using Ai-1 or an uploaded image.'
+      : 'Create a text-led hero section. No banner image will be inserted into the email.';
+  }
+}
+
+function getBannerText(raw, parsed){
+  if(parsed && parsed.imageTags && parsed.imageTags.length) return parsed.imageTags[0].content.trim();
+  const lines = raw.split(/\n/).map(x => x.trim()).filter(Boolean);
+  const candidates = lines.filter(line => !/^\{[^}]+\}/.test(line));
+  const scored = candidates.map((text, i) => {
+    let score = 0;
+    if(text.length >= 8 && text.length <= 90) score += 4;
+    if(/\b(last|final|deadline|admission|apply|results?|launch|offer|discover|explore|new|2026|2027)\b/i.test(text)) score += 5;
+    if(i === 0) score += 2;
+    if(/[.!?]$/.test(text)) score -= 1;
+    return {text, score, i};
+  }).sort((a,b) => b.score-a.score || a.i-b.i);
+  return scored[0]?.text || candidates[0] || 'Discover what’s next';
+}
+
+function setBannerPreview(dataUri, source, status){
+  bannerDataUri = dataUri; bannerSource = source;
+  if(bannerMode !== 'image') selectBannerMode('image'); // a banner exists, so the hero is image-based
+  document.getElementById('bannerPreview').src = dataUri;
+  document.getElementById('bannerPreviewWrap').style.display = 'block';
+  document.getElementById('bannerStatus').textContent = status || 'Banner ready.';
+  try{
+    sessionStorage.setItem('ttm_last_banner', JSON.stringify({dataUri, source}));
+  }catch(e){}
+}
+
+function restoreLastBanner(){
+  try{
+    const saved = JSON.parse(sessionStorage.getItem('ttm_last_banner') || 'null');
+    if(saved && saved.dataUri){
+      setBannerPreview(saved.dataUri, saved.source || 'restored', 'Previously generated banner restored for this session.');
+    }
+  }catch(e){}
+}
+
+function handleBannerUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  optimizeBannerBlob(file).then(dataUri => {
+    setBannerPreview(dataUri, 'uploaded', `✓ Banner optimized for email: max 650px wide and under 1 MB.`);
+  }).catch(err => {
+    document.getElementById('bannerStatus').textContent = err.message || 'Could not optimize the banner.';
+    showStatus(err.message || 'Could not optimize the banner.', 'error');
+  });
+}
+
+function optimizeBannerBlob(blob){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      try{
+        const MAX_WIDTH = 650;
+        const MAX_BYTES = 900 * 1024; // comfortably below 1 MB
+        let width = Math.min(MAX_WIDTH, img.naturalWidth || img.width || MAX_WIDTH);
+        let height = Math.max(1, Math.round((img.naturalHeight || img.height || 1) * (width / Math.max(1, (img.naturalWidth || img.width || width)))));
+
+        const canvas = document.createElement('canvas');
+        const draw = () => {
+          canvas.width = Math.max(1, Math.round(width));
+          canvas.height = Math.max(1, Math.round(height));
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        };
+
+        draw();
+        let quality = 0.90;
+        let dataUri = canvas.toDataURL('image/jpeg', quality);
+        let guard = 0;
+        while(dataUri.length > (MAX_BYTES * 4 / 3) && quality > 0.50 && guard++ < 20){
+          quality -= 0.04;
+          dataUri = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        // If quality reduction is not enough, reduce dimensions while never exceeding 650px.
+        while(dataUri.length > (MAX_BYTES * 4 / 3) && width > 420){
+          const ratio = 0.90;
+          width = Math.max(420, Math.floor(width * ratio));
+          height = Math.max(1, Math.round((img.naturalHeight || img.height || 1) * (width / Math.max(1, (img.naturalWidth || img.width || 1)))));
+          draw();
+          quality = Math.min(0.84, quality);
+          dataUri = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        // Final strict byte check. Data URI base64 payload is ~4/3 the binary bytes.
+        const comma = dataUri.indexOf(',');
+        const base64 = comma >= 0 ? dataUri.slice(comma + 1) : '';
+        const approxBytes = Math.floor(base64.length * 3 / 4);
+        if(approxBytes > MAX_BYTES){
+          URL.revokeObjectURL(url);
+          reject(new Error('Could not optimize the banner below 1 MB. Please use a smaller source image.'));
+          return;
+        }
+
+        URL.revokeObjectURL(url);
+        resolve(dataUri);
+      }catch(err){ URL.revokeObjectURL(url); reject(err); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read banner image.')); };
+    img.src = url;
+  });
+}
+
+function clearBanner(){
+  bannerDataUri = null; bannerSource = null;
+  try{ sessionStorage.removeItem('ttm_last_banner'); }catch(e){}
+  document.getElementById('bannerInput').value = '';
+  document.getElementById('bannerPreviewWrap').style.display = 'none';
+  document.getElementById('bannerStatus').textContent = '';
+}
+
+const CHATGPT_BRIDGE = 'http://127.0.0.1:3210';
+let chatGPTGenerationBusy = false;
+let activeBrandPalette = null;
+let activeBrandPaletteUrl = '';
+const brandPaletteMemo = new Map();
+
+function normalizeBrandUrl(value){
+  let s = String(value || '').trim().replace(/^[<\[(\s]+|[>\]),.;\s]+$/g, '');
+  if(!s) return '';
+  if(!/^https?:\/\//i.test(s)) s = 'https://' + s;
+  try{
+    const u = new URL(s);
+    if(!['http:','https:'].includes(u.protocol) || !u.hostname || u.username || u.password) return '';
+    u.hash = '';
+    return u.href;
+  }catch(e){ return ''; }
+}
+function getBrandWebsiteUrl(rawOverride, instructionsOverride){
+  const explicit = normalizeBrandUrl(document.getElementById('brandWebsiteUrl')?.value || '');
+  if(explicit) return explicit;
+  const raw = rawOverride ?? document.getElementById('rawText')?.value ?? '';
+  const instr = instructionsOverride ?? document.getElementById('instructionField')?.value ?? '';
+  const corpus = `${raw}\n${instr}`;
+  const matches = corpus.match(/(?:https?:\/\/|www\.)[^\s<>{}"'`\])]+/ig) || [];
+  for(let s of matches){
+    s = s.replace(/[),.;!?]+$/g, '');
+    const normalized = normalizeBrandUrl(s);
+    if(normalized) return normalized;
+  }
+  // Bare-domain helper for user-entered brand references such as adamasuniversity.ac.in.
+  const bare = corpus.match(/\b(?:[a-z0-9-]+\.)+(?:ac\.in|edu|com|org|net|in|co\.uk|edu\.in)(?:\/[a-z0-9._~:/?#\[\]@!$&'()*+,;=%-]*)?/ig) || [];
+  for(let s of bare){ const normalized = normalizeBrandUrl(s); if(normalized) return normalized; }
+  return '';
+}
+function updateBrandSiteStatus(message, state=''){
+  const el = document.getElementById('brandSiteStatus');
+  if(!el) return;
+  el.textContent = message || '';
+  el.style.color = state === 'error' ? 'var(--danger)' : state === 'ok' ? 'var(--success)' : 'var(--muted)';
+}
+async function fetchWebsitePalette(url){
+  const normalized = normalizeBrandUrl(url);
+  if(!normalized) return null;
+  if(brandPaletteMemo.has(normalized)) return brandPaletteMemo.get(normalized);
+  const response = await fetch(CHATGPT_BRIDGE + '/api/site-palette', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:normalized}), signal:AbortSignal.timeout(25000)
+  });
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok || !payload.ok) throw new Error(payload.message || `Website palette extraction failed (HTTP ${response.status})`);
+  if(!Array.isArray(payload.colors) || !payload.colors.length) throw new Error('No brand colours could be extracted from this website.');
+  brandPaletteMemo.set(normalized, payload);
+  return payload;
+}
+async function resolveBrandPalette(rawOverride, instructionsOverride, quiet=false){
+  const url = getBrandWebsiteUrl(rawOverride, instructionsOverride);
+  if(!url){ activeBrandPalette = null; activeBrandPaletteUrl = ''; updateBrandSiteStatus('No website URL detected — the tool will choose a design palette.'); return null; }
+  if(activeBrandPalette && activeBrandPaletteUrl === url){
+    updateBrandSiteStatus(`Brand colours ready: ${activeBrandPalette.colors.map(c=>c.hex).slice(0,4).join(' · ')}`, 'ok');
+    return activeBrandPalette;
+  }
+  updateBrandSiteStatus(`Reading brand colours from ${new URL(url).hostname}…`);
+  try{
+    const palette = await fetchWebsitePalette(url);
+    activeBrandPalette = palette; activeBrandPaletteUrl = url;
+    updateBrandSiteStatus(`Brand colours detected: ${palette.colors.map(c=>c.hex).slice(0,4).join(' · ')}`, 'ok');
+    return palette;
+  }catch(err){
+    activeBrandPalette = null; activeBrandPaletteUrl = '';
+    updateBrandSiteStatus(`Could not read site colours; using the normal design palette. ${err.message}`, 'error');
+    if(!quiet) showToast('Website colours unavailable; continuing with an automatic palette.');
+    return null;
+  }
+}
+function brandPalettePrompt(palette){
+  if(!palette || !Array.isArray(palette.colors) || !palette.colors.length) return '';
+  const colors = palette.colors.map(c=>c.hex).slice(0,5);
+  const primary = colors[0];
+  const supports = colors.slice(1).join(', ');
+  return `\n\nBRAND PALETTE FROM THE USER-SUPPLIED WEBSITE (${palette.domain || palette.url}): The website's visible styles were sampled and these brand colours were detected: ${colors.join(', ')}. Use ${primary} as the primary brand colour${supports ? `, with these supporting colours ${supports}` : ''}. Keep the same brand identity across banner and email; use white/cream/neutral backgrounds and accessible text contrast. Do not introduce an unrelated palette. This palette instruction takes precedence over the random palette direction above.`;
+}
+
+const BANNER_VARIATIONS = [
+  'photorealistic poster: a joyful young person in casual-smart clothes leaning on a big curved saturated RED shape, holding a relevant object, a city skyline and blue sky behind; GIANT oversized heavy white typography on the red curve; energetic social-media-poster feel',
+  'bright, airy, almost white/pale-blue scene: soft campus or office glass buildings blurred in the background, a faint globe/world-map watermark, one smiling person centred; headline in a two-tone navy + cyan heavy sans; very clean and modern',
+  'flat vector illustration with thin black outlines: two friendly characters interacting with a big monitor/dashboard, floating sparkles, lavender-purple + mint palette on a white background, lots of clean space for the headline',
+  'sunny outdoor photo of a person in a graduation gown or smart outfit pointing down toward a solid royal-blue panel that holds a huge white headline and a small pill subtitle chip; building and blue sky behind',
+  'corporate flyer style: a smiling cut-out professional on the right, off-white left half with an extra-bold + light two-weight headline, a slim vertical orange accent bar, tidy and trustworthy',
+  'dark luxury look: deep black/navy background with warm gold light streaks, a dramatically spot-lit subject, elegant serif headline with thin gold rules, premium and calm',
+  'purely typographic poster with NO people: enormous condensed heavy letters filling the frame, two bold colours, geometric shapes and thick lines, high contrast',
+  '3D clay/isometric render: floating rounded icons (books, cap, globe, chat bubbles, trophy) on a smooth vivid gradient background, soft shadows, playful yet polished, headline in a chunky rounded font',
+  'duotone photo cut-out of a person with a vivid magenta-to-orange gradient overlay, sticker-like circles and stars, tilted label chips, bold energetic youth-culture feel',
+  'paper-cut collage with hand-drawn doodles: cream paper texture, bright flat colour shapes, arrows and underlines, a cut-out photo of a person, playful and human',
+  'Swiss-style minimal grid: huge whitespace, one strong accent colour, a small circular photo, tiny uppercase labels, big left-aligned headline, sophisticated and quiet',
+  'abstract mesh-gradient tech look: glowing blue/purple/teal gradients with frosted-glass cards floating over them, subtle grid lines, futuristic yet friendly, crisp white headline',
+  'warm editorial photography: a candid natural-light photo in muted earth tones (terracotta, sage, sand), elegant serif headline overlaid on a calm area, magazine-cover feel',
+  'diagonal split-screen: one half a vivid full-colour photo of a person, the other half a solid bold colour with the headline, separated by a sharp angled edge, confident and dynamic'
+];
+function randomBannerVariation(){
+  return BANNER_VARIATIONS[bagDraw('banner', BANNER_VARIATIONS.length)];
+}
+
+async function persistOptimizedBanner(dataUri, originalFilename){
+  try{
+    const response = await fetch(CHATGPT_BRIDGE + '/api/save-optimized-banner', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dataUri, originalFilename})
+    });
+    const payload = await response.json().catch(()=>({}));
+    if(!response.ok || !payload.ok) throw new Error(payload.message || `Ai-1 image save failed (HTTP ${response.status})`);
+    return payload;
+  }catch(err){
+    // The optimized data URI is still used in the email even if the local save step fails.
+    logGenIssue('Ai-1 optimized image local save warning:\n' + (err.message || err));
+    return null;
+  }
+}
+
+async function generateChatGPTBanner(){
+  const raw = document.getElementById('rawText').value.trim();
+  if(!raw){ showStatus('Paste your email content first.', 'error'); return; }
+  if(chatGPTGenerationBusy) return;
+
+  const btn = document.getElementById('chatgptBannerBtn');
+  const parsed = parseTaggedLines(raw);
+  const bannerText = getBannerText(raw, parsed);
+  const variation = randomBannerVariation();
+  const explicit = parsed.imageTags && parsed.imageTags.length ? parsed.imageTags[0].content.trim() : '';
+
+  chatGPTGenerationBusy = true;
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = '⏳ Generating…';
+  document.getElementById('bannerStatus').textContent = 'Opening Ai-1 and generating the image…';
+  showStatus('Ai-1 is generating the image…', '');
+  showBusy('Ai-1 is generating the image…');
+
+  try{
+    const palette = await resolveBrandPalette(raw, document.getElementById('instructionField')?.value || '', true);
+    const paletteInstruction = palette ? `\n\nBRAND COLOURS FROM ${palette.domain || palette.url}: Use these colours consistently: ${palette.colors.map(c=>c.hex).slice(0,5).join(', ')}. The first colour is the primary brand colour. Keep the banner consistent with this website identity; do not invent a different palette.` : '';
+    const prompt = `Create ONE premium marketing-email hero/banner image for this campaign.\n\nEXACT HERO/BANNER MESSAGE:\n${explicit || bannerText}\n\nVISUAL DIRECTION:\n${variation}\n\nREQUIREMENTS:\n- Landscape email hero, target maximum width 650 pixels. The final image will be optimized client-side to stay under 1 MB while preserving visual quality.\n- The exact supplied hero/banner message is the only marketing copy allowed in the image. Do not add any other copy.\n- If the supplied text is too long, keep every word but use clean line breaks and fit it comfortably inside safe margins.\n- Make the composition visually distinctive from previous generations.\n- Strong focal visual, polished professional education/business aesthetic.\n- Do not invent dates, logos, statistics, prices, claims, brands, or extra promotional copy.\n- Do not use fake logos.\n- Keep the primary text highly legible on desktop and mobile crop.\n- No mock email frame, no browser UI, no watermark.${paletteInstruction}\n- Return the finished image only.`;
+    const response = await fetch(CHATGPT_BRIDGE + '/api/chatgpt-banner', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt, bannerText})
+    });
+    const payload = await response.json().catch(()=>({}));
+    if(!response.ok || !payload.ok){
+      const msg = payload.message || `Ai-1 bridge returned HTTP ${response.status}`;
+      throw new Error(msg);
+    }
+
+    const imageResponse = await fetch(CHATGPT_BRIDGE + payload.imageUrl + '?v=' + Date.now());
+    if(!imageResponse.ok) throw new Error('Generated image was saved, but the app could not load the local image file.');
+    const blob = await imageResponse.blob();
+    const dataUri = await optimizeBannerBlob(blob);
+    const optimizedSaved = await persistOptimizedBanner(dataUri, payload.filename);
+    const savedName = optimizedSaved?.filename || payload.filename;
+
+    setBannerPreview(dataUri, 'ai-1', `✓ Ai-1 image optimized to max 650px and under 1 MB, saved locally as “${savedName}”.`);
+    showToast('Ai-1 image generated, optimized and saved locally');
+
+    if(currentStep === 4){
+      // Same as the original: a freshly generated banner is inserted by rebuilding the mailer.
+      showStatus('Banner ready. Building the email with the new hero image…', '');
+      await generateMailer(true);
+    } else {
+      // Stay on Step 2 so the generated image can actually be seen before continuing.
+      refreshReview();
+      showStatus('Banner ready — check the preview, then continue to Review.', 'ok');
+    }
+  }catch(err){
+    const message = String(err && err.message || err);
+    if(/Failed to fetch|NetworkError|fetch/i.test(message)){
+      document.getElementById('bannerStatus').textContent = 'Open the local Edge bridge once and complete the Ai-1 session, then click Ai-1 — Generate Image again.';
+      showStatus('Start the local Ai-1 bridge first.', 'error');
+    }else{
+      document.getElementById('bannerStatus').textContent = message;
+      showStatus(message, 'error');
+    }
+    logGenIssue('Ai-1 image generation failed:\n' + message);
+  }finally{
+    chatGPTGenerationBusy = false;
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+    hideBusy();
+  }
+}
+
+function blobToDataUri(blob){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+
+function escapeXml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+function wrapSvgText(text, maxChars=30){
+  const words = String(text).split(/\s+/); const lines=[]; let line='';
+  words.forEach(w=>{ const next=(line?line+' ':'')+w; if(next.length>maxChars && line){lines.push(line); line=w;} else line=next; });
+  if(line) lines.push(line); return lines.slice(0,3);
+}
+
+
+/* ---------- Two-logo header (left/right, embedded as data URIs) ---------- */
+let logoLeftDataUri = null;
+let logoRightDataUri = null;
+
+function handleLogoUpload(event, side){
+  const file = event.target.files[0];
+  if(!file) return;
+  if(file.size > 300 * 1024){
+    showToast('Logo is large (' + Math.round(file.size/1024) + 'KB) — consider a smaller file for email.');
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    if(side === 'left') {
+      logoLeftDataUri = reader.result;
+      document.getElementById('logoLeftPreview').src = logoLeftDataUri;
+      document.getElementById('logoLeftPreviewWrap').style.display = 'flex';
+    } else {
+      logoRightDataUri = reader.result;
+      document.getElementById('logoRightPreview').src = logoRightDataUri;
+      document.getElementById('logoRightPreviewWrap').style.display = 'flex';
+    }
+    syncLogoPreviews();
+  };
+  reader.readAsDataURL(file);
+}
+function removeLogo(side){
+  if(side === 'left'){
+    logoLeftDataUri = null;
+    document.getElementById('logoLeftInput').value = '';
+    document.getElementById('logoLeftPreviewWrap').style.display = 'none';
+  } else {
+    logoRightDataUri = null;
+    document.getElementById('logoRightInput').value = '';
+    document.getElementById('logoRightPreviewWrap').style.display = 'none';
+  }
+}
+
+/* ---------- Gallery (saved mailers, stored only in this browser) ---------- */
+const GALLERY_KEY = 'text_to_mailer_gallery';
+
+function getGallery(){
+  try{ return JSON.parse(localStorage.getItem(GALLERY_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function setGallery(items){ localStorage.setItem(GALLERY_KEY, JSON.stringify(items)); }
+
+function saveToGallery(){
+  if(!currentHtml){ showToast('Generate a mailer first'); return; }
+  const titleMatch = currentHtml.match(/<title>([^<]*)<\/title>/i);
+  const suggested = (titleMatch && titleMatch[1].trim()) || 'Untitled Mailer';
+  const name = prompt('Save this mailer as:', suggested);
+  if(!name) return; // cancelled
+
+  const items = getGallery();
+  items.unshift({ id: Date.now(), name: name.trim() || suggested, html: currentHtml, savedAt: new Date().toISOString() });
+  setGallery(items);
+  showToast('Saved "' + (name.trim() || suggested) + '" to gallery');
+}
+
+function openGallery(){
+  const items = getGallery();
+  const list = document.getElementById('galleryList');
+  if(!items.length){
+    list.innerHTML = '<p style="font-family:var(--serif);font-weight:500;font-size:13px;color:#94a3b8;text-align:center;padding:20px 0;">No saved mailers yet. Generate one, then click "💾 Save to Gallery".</p>';
+  } else {
+    list.innerHTML = items.map(it => {
+      const date = new Date(it.savedAt);
+      const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      return `
+        <div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fbfbfd;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div style="min-width:0;">
+            <p style="margin:0 0 2px;font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(it.name)}</p>
+            <p style="margin:0;font-size:11px;font-family:var(--serif);font-weight:500;color:#8a93a3;">${dateStr}</p>
+          </div>
+          <div style="display:flex;gap:6px;flex:none;">
+            <button onclick="loadFromGallery(${it.id})" style="font-family:var(--serif);font-weight:600;font-size:12px;padding:7px 12px;border:1px solid var(--postal-blue);background:#fff;color:var(--postal-blue);border-radius:8px;cursor:pointer;">Load</button>
+            <button onclick="downloadFromGallery(${it.id})" style="font-family:var(--serif);font-weight:600;font-size:12px;padding:7px 12px;border:1px solid var(--line);background:#fff;color:#374151;border-radius:8px;cursor:pointer;">↓</button>
+            <button onclick="deleteFromGallery(${it.id})" style="font-family:var(--serif);font-weight:600;font-size:12px;padding:7px 12px;border:1px solid var(--stamp-red);background:#fff;color:var(--stamp-red);border-radius:8px;cursor:pointer;">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  document.getElementById('galleryOverlay').style.display = 'flex';
+}
+function closeGallery(){
+  document.getElementById('galleryOverlay').style.display = 'none';
+}
+function loadFromGallery(id){
+  const item = getGallery().find(it => it.id === id);
+  if(!item) return;
+  currentHtml = item.html;
+  bannerDataUri = null; bannerSource = null;
+  hydrateLogosFromCurrentHtml();
+  hydrateBannerFromCurrentHtml();
+  currentHtml = markHeroImage(currentHtml);
+  // keep the hero mode in step with what the loaded mailer actually contains
+  if(bannerDataUri){ selectBannerMode('image'); } else { bannerMode = 'text'; selectBannerMode('text'); }
+  renderOutput();
+  document.getElementById('resetLink').style.display = 'block';
+  document.getElementById('shuffleLink').style.display = 'block';
+  document.getElementById('refineLink').style.display = 'block';
+  closeGallery();
+  if(typeof showStep === 'function') showStep(4);
+  showStatus('Loaded "' + item.name + '" from gallery — click “Refine current design” to modify it, or try a different design.', 'ok');
+  showToast('Loaded from gallery');
+}
+function downloadFromGallery(id){
+  const item = getGallery().find(it => it.id === id);
+  if(!item) return;
+  const blob = new Blob([item.html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (item.name || 'mailer').replace(/[^a-z0-9]+/gi,'-').toLowerCase() + '.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function deleteFromGallery(id){
+  setGallery(getGallery().filter(it => it.id !== id));
+  openGallery(); // re-render list
+}
+function escHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function startOver(){
+  // Full reset back to Step 1 — text, logos, banner and instructions are all cleared.
+  // Gallery (saved templates) is untouched.
+  currentHtml = null;
+  textEditMode = false;
+  genLogMessages = [];
+  if(typeof resetTrio === 'function') resetTrio();
+  document.getElementById('rawText').value = '';
+  document.getElementById('instructionField').value = '';
+  removeLogo('left');
+  removeLogo('right');
+  clearBanner();
+  bannerMode = 'image';
+  selectBannerMode('image');
+  document.getElementById('editModeBanner').style.display = 'none';
+  setEditBtnState(false);
+  document.getElementById('saveEditBtn').style.display = 'none';
+  document.getElementById('resetLink').style.display = 'none';
+  document.getElementById('shuffleLink').style.display = 'none';
+  document.getElementById('refineLink').style.display = 'none';
+  syncGenLogUi();
+  showStatus('Cleared. Generate a fresh design from your text.', '');
+  if(typeof showStep === 'function') showStep(1);
+}
+
+function differentDesign(){
+  generateMailer(true);
+}
+
+function refineCurrent(){
+  if(!currentHtml){ showToast('Generate a mailer first'); return; }
+  generateMailer(false);
+}
+
+/* ---------- Deterministic email finishing ---------- */
+const UNSUBSCRIBE_URL = 'https://www.ieplads.com/mailers/2026_ui/shiksha/pearl-nu-3-june/%3C!--%20#unsubscribeUrl%20--%3E%3C!--%20unsubscribeUrl#%20--%3E';
+
+function buildTwoLogoHeader(){
+  if(!logoLeftDataUri && !logoRightDataUri) return '';
+  const left = logoLeftDataUri
+    ? `<img data-ttm-logo="left" src="${logoLeftDataUri}" alt="" style="display:block;max-width:180px;max-height:54px;width:auto;height:auto;border:0;outline:none;text-decoration:none;">`
+    : '';
+  const right = logoRightDataUri
+    ? `<img data-ttm-logo="right" src="${logoRightDataUri}" alt="" style="display:block;max-width:180px;max-height:54px;width:auto;height:auto;border:0;outline:none;text-decoration:none;">`
+    : '';
+  return `<!-- TTM_TOP_LOGO_ROW -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;background:#ffffff;">
+  <tr><td align="center" style="padding:0;margin:0;">
+    <table role="presentation" width="650" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:650px;border-collapse:collapse;background:#ffffff;">
+      <tr>
+        <td align="left" valign="middle" style="padding:14px 18px 12px 18px;vertical-align:middle;width:50%;">${left}</td>
+        <td align="right" valign="middle" style="padding:14px 18px 12px 18px;vertical-align:middle;width:50%;">${right}</td>
+      </tr>
+    </table>
+  </td></tr>
+</table>`;
+}
+function normalizeEmailFooter(html){
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Remove generic "view in browser" links and rows containing the old footer copy.
+    Array.from(doc.querySelectorAll('tr')).forEach(tr => {
+      const t = (tr.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
+      if(t.includes('view in browser') || t.includes('you are receiving this email because') || t.includes('privacy policy') || t.includes('unsubscribe')){
+        tr.remove();
+      }
+    });
+    Array.from(doc.querySelectorAll('a')).forEach(a => {
+      const t = (a.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
+      if(t.includes('view in browser')) a.closest('td,div,p')?.remove();
+    });
+
+    // Remove any leftover standalone footer phrases.
+    Array.from(doc.querySelectorAll('p,div,td')).forEach(el => {
+      const t = (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
+      if(t === 'view in browser' || t.startsWith('you are receiving this email because you subscribed')) el.remove();
+    });
+
+    const footer = doc.createElement('div');
+    footer.innerHTML = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;background:#ffffff;">
+  <tr>
+    <td align="center" style="padding:22px 18px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">
+      To unsubscribe <a href="${UNSUBSCRIBE_URL}" style="color:#2563eb;text-decoration:underline;">click here</a> to visit the Accounts &amp; Settings page and change your mail preferences
+    </td>
+  </tr>
+</table>`;
+    doc.body.appendChild(footer.firstElementChild);
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }catch(e){
+    // Fallback: remove the most common old footer/view-browser wording and append the canonical footer.
+    let out = String(html || '')
+      .replace(/<[^>]*>[^<]*view in browser[^<]*<\/[^>]+>/ig,'')
+      .replace(/<[^>]*>[^<]*you are receiving this email because[^<]*<\/[^>]+>/ig,'')
+      .replace(/<[^>]*>[^<]*privacy policy[^<]*<\/[^>]+>/ig,'');
+    const footer = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;background:#ffffff;"><tr><td align="center" style="padding:22px 18px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">To unsubscribe <a href="${UNSUBSCRIBE_URL}" style="color:#2563eb;text-decoration:underline;">click here</a> to visit the Accounts &amp; Settings page and change your mail preferences</td></tr></table>`;
+    return out.replace(/<\/body>/i, footer + '</body>');
+  }
+}
+
+function injectTopLogoRow(html){
+  const header = buildTwoLogoHeader();
+  let out = stripTopLogoRow(String(html || ''));
+  if(!header) return out;
+
+  if(/<body\b[^>]*>/i.test(out)){
+    return out.replace(/(<body\b[^>]*>)/i, '$1' + header);
+  }
+
+  // Safety fallback if the code generator returned an HTML fragment without <body>.
+  if(/<html\b/i.test(out)){
+    return out.replace(/<\/html>/i, '<body style="margin:0;padding:0;">' + header + '</body></html>');
+  }
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;">' + header + out + '</body></html>';
+}
+
+/* Removes the app-injected logo row. The old regex version silently failed once the HTML had been
+   through DOMParser (which inserts <tbody>), so every logo change / refine stacked another row. */
+function stripTopLogoRow(html){
+  if(!html) return html;
+  if(!/TTM_TOP_LOGO_ROW|data-ttm-logo/i.test(html)) return html;
+  try{
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_COMMENT);
+    const marks = [];
+    while(walker.nextNode()){ if(/TTM_TOP_LOGO_ROW/i.test(walker.currentNode.nodeValue || '')) marks.push(walker.currentNode); }
+    marks.forEach(c => { const n = c.nextElementSibling; if(n && n.tagName === 'TABLE') n.remove(); c.remove(); });
+    // If the model dropped the comment but kept the logo images, remove their wrapper table too.
+    doc.querySelectorAll('img[data-ttm-logo]').forEach(img => {
+      if(!img.isConnected) return;
+      let t = img.closest('table');
+      while(t){
+        const outer = t.parentElement && t.parentElement.closest('table');
+        if(outer && !(outer.textContent || '').trim() &&
+           Array.from(outer.querySelectorAll('img')).every(i => i.hasAttribute('data-ttm-logo'))) t = outer; else break;
+      }
+      if(t) t.remove(); else img.remove();
+    });
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }catch(e){ return html; }
+}
+
+function markHeroImage(html){
+  if(!html) return html;
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    Array.from(doc.querySelectorAll('img[data-ttm-hero]')).forEach(img => img.removeAttribute('data-ttm-hero'));
+    let hero = null;
+    if(bannerDataUri){
+      hero = Array.from(doc.querySelectorAll('img')).find(img => !img.hasAttribute('data-ttm-logo') && img.getAttribute('src') === bannerDataUri);
+    }
+    if(!hero && !bannerDataUri){
+      // In text-hero mode do not guess that a normal content image is the hero.
+      return html;
+    }
+    if(hero) hero.setAttribute('data-ttm-hero','1');
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }catch(e){ return html; }
+}
+
+function hydrateLogosFromCurrentHtml(){
+  if(!currentHtml) return;
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(currentHtml, 'text/html');
+    const markedLeft = doc.querySelector('img[data-ttm-logo="left"]');
+    const markedRight = doc.querySelector('img[data-ttm-logo="right"]');
+    if(markedLeft) logoLeftDataUri = markedLeft.getAttribute('src') || null;
+    if(markedRight) logoRightDataUri = markedRight.getAttribute('src') || null;
+    if(!markedLeft || !markedRight){
+      const comment = Array.from(doc.body ? doc.body.childNodes : []).find(n => n.nodeType === 8 && /TTM_TOP_LOGO_ROW/i.test(n.nodeValue || ''));
+      if(comment && comment.nextElementSibling){
+        const imgs = comment.nextElementSibling.querySelectorAll('img');
+        if(!markedLeft && imgs[0]) logoLeftDataUri = imgs[0].getAttribute('src') || null;
+        if(!markedRight && imgs[1]) logoRightDataUri = imgs[1].getAttribute('src') || null;
+      }
+    }
+    syncLogoPreviews();
+  }catch(e){}
+}
+
+function hydrateBannerFromCurrentHtml(){
+  if(!currentHtml) return;
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(currentHtml, 'text/html');
+    const hero = doc.querySelector('img[data-ttm-hero]') || Array.from(doc.querySelectorAll('img')).find(img => !img.hasAttribute('data-ttm-logo'));
+    const src = hero ? hero.getAttribute('src') : '';
+    if(src && /^data:image\//i.test(src)){
+      bannerDataUri = src;
+      bannerSource = 'current-mailer';
+    }
+  }catch(e){}
+}
+
+function replaceHeroImage(html, dataUri, oldSrc){
+  if(!html) return html;
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    let hero = doc.querySelector('img[data-ttm-hero]');
+    const previous = oldSrc || bannerDataUri;
+    if(!hero && previous){
+      hero = Array.from(doc.querySelectorAll('img')).find(img => !img.hasAttribute('data-ttm-logo') && img.getAttribute('src') === previous);
+    }
+    if(hero){
+      hero.setAttribute('src', dataUri);
+      hero.setAttribute('data-ttm-hero','1');
+    }else{
+      const table=doc.createElement('table');
+      table.setAttribute('role','presentation'); table.setAttribute('width','100%'); table.setAttribute('cellpadding','0'); table.setAttribute('cellspacing','0'); table.setAttribute('border','0');
+      table.setAttribute('style','width:100%;border-collapse:collapse;background:#ffffff;');
+      const tr=doc.createElement('tr'); const td=doc.createElement('td');
+      td.setAttribute('align','center'); td.setAttribute('style','padding:0;margin:0;');
+      const img=doc.createElement('img'); img.setAttribute('data-ttm-hero','1'); img.setAttribute('src',dataUri); img.setAttribute('alt',''); img.setAttribute('style','display:block;width:100%;max-width:650px;height:auto;border:0;outline:none;text-decoration:none;');
+      td.appendChild(img); tr.appendChild(td); table.appendChild(tr);
+      if(doc.body){
+        const firstContent=Array.from(doc.body.children).find(el => !(el.textContent||'').includes('TTM_TOP_LOGO_ROW'));
+        if(firstContent) doc.body.insertBefore(table, firstContent); else doc.body.appendChild(table);
+      }
+    }
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }catch(e){ return html; }
+}
+
+function removeHeroImage(html){
+  if(!html) return html;
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    let hero = doc.querySelector('img[data-ttm-hero]');
+    if(!hero && bannerDataUri){
+      hero = Array.from(doc.querySelectorAll('img')).find(img => !img.hasAttribute('data-ttm-logo') && img.getAttribute('src') === bannerDataUri);
+    }
+    if(hero){
+      const td = hero.closest('td');
+      const tr = hero.closest('tr');
+      hero.remove();
+      if(td && !td.textContent.trim() && td.querySelectorAll('img').length === 0) td.style.padding = '0';
+      if(tr && tr.querySelectorAll('img').length === 0 && !tr.textContent.trim()) tr.remove();
+    }
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }catch(e){ return html; }
+}
+
+function syncLogoPreviews(){
+  const l=document.getElementById('logoLeftPreview'), r=document.getElementById('logoRightPreview');
+  const lw=document.getElementById('logoLeftPreviewWrap'), rw=document.getElementById('logoRightPreviewWrap');
+  if(lw){ lw.style.display=logoLeftDataUri?'flex':'none'; } if(l&&logoLeftDataUri) l.src=logoLeftDataUri;
+  if(rw){ rw.style.display=logoRightDataUri?'flex':'none'; } if(r&&logoRightDataUri) r.src=logoRightDataUri;
+}
+
+/* ---------- Generate / Update Mailer with AI ---------- */
+async function generateMailer(forceNew = true){
+  const raw = document.getElementById('rawText').value.trim();
+  if(!raw){ showStatus('Paste some text first.', 'error'); return; }
+  // Banner is optional (as in V8). If "Image" is selected but nothing exists yet, ask instead of failing silently.
+  if(bannerMode === 'image' && !bannerDataUri && !currentHtml){
+    if(!confirm('No banner image has been created yet.\n\nOK = continue with a text-based hero\nCancel = go back and add a banner')){
+      showStep(2); return;
+    }
+    selectBannerMode('text');
+  }
+
+  // If the person is mid-edit in the preview, fold those edits into currentHtml
+  // first so a follow-up AI instruction builds on the latest text, not stale text.
+  if(textEditMode) saveTextEdit();
+  clearGenLog();
+
+  const instructions = document.getElementById('instructionField').value.trim();
+  const genBtns = ['generateBtn','generateBtn4'].map(id => document.getElementById(id)).filter(Boolean);
+  const btn = { set disabled(v){ genBtns.forEach(x => x.disabled = v); } };
+  btn.disabled = true;
+  if(forceNew) currentHtml = null;
+
+  // Parse optional {Label} | Content tags out of the raw text — these guide the
+  // AI on structure (headline vs section title etc.), and labels mentioning
+  // banner/image/creative/visual/graphic trigger an actual generated image.
+  const { cleanedRaw, roleHints, imageTags } = parseTaggedLines(raw);
+
+  const bannerPlaceholders = {};
+  const guidanceLines = [];
+
+  // The user can generate the banner through Ai-1 or upload an existing image.
+  const useImageBanner = bannerMode === 'image' && !!bannerDataUri;
+  if(useImageBanner){
+    // (the exact placeholder/keep-existing wording is finalised below once we know if this is a refine)
+  } else {
+    // Text hero (or no banner): still honour {banner}...{/banner} / the auto-detected hero line, exactly like V8.
+    guidanceLines.push('- TEXT-BASED HERO MODE: Do not use a hero/banner image. Build a strong text-led hero using typography, color blocks, spacing, or simple table-safe shapes.');
+    if(imageTags.length){
+      const explicit = imageTags[0].content.trim();
+      guidanceLines.push(`- EXPLICIT BANNER CONTENT: "${explicit}". This text is the ONLY content to use for the hero/banner. Do not replace it with another headline, summarize it, or add unsupported claims.`);
+    } else {
+      const autoHero = getBannerText(raw, {imageTags});
+      guidanceLines.push(`- AUTO-DETECTED HERO: "${autoHero}". Use this as the primary hero/banner message. Do not invent a different headline.`);
+    }
+  }
+
+  for(const hint of roleHints){
+    guidanceLines.push(`- "${hint.label}": "${hint.content}" — treat this line according to its label (e.g. use it as the ${hint.label}).`);
+  }
+  let roleHintsBlock = ''; // built after the banner guidance is finalised (see below)
+
+  showStatus(forceNew ? 'Designing a fresh email…' : 'Applying your changes…', '');
+  showBusy(forceNew ? 'Designing a fresh email…' : 'Applying your changes…');
+  const brandPalette = await resolveBrandPalette(raw, instructions, true);
+  const brandPaletteDirective = brandPalettePrompt(brandPalette);
+
+  // The generators never see real base64 image data. It receives short placeholder
+  // tokens, which are replaced with the selected logo/banner after generation.
+  const LOGO_LEFT_PLACEHOLDER = 'LOGO_LEFT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY';
+  const LOGO_RIGHT_PLACEHOLDER = 'LOGO_RIGHT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY';
+  const BASE64_IMG_RE = /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g;
+
+  // The app re-injects the logo row itself, so never show the old one to the model (prevents duplicates).
+  let contextHtml = currentHtml ? stripTopLogoRow(currentHtml) : currentHtml;
+  let previousImages = [];
+  if(contextHtml){
+    const matches = contextHtml.match(BASE64_IMG_RE) || [];
+    if(matches.length){
+      let imageIndex = 0;
+      contextHtml = contextHtml.replace(BASE64_IMG_RE, (m) => {
+        const token = `EXISTING_IMAGE_${imageIndex++}_TOKEN`;
+        previousImages.push({token, data:m});
+        return token;
+      });
+    }
+  }
+
+  if(useImageBanner){
+    const existing = previousImages.find(x => x.data === bannerDataUri);
+    if(existing){
+      // Refine: the hero is already in the design under an existing token -- keep it, don't add a second banner.
+      guidanceLines.unshift(`- The image banner is already in the current email as ${existing.token}. Keep it as the prominent hero visual, using that token exactly. Do not add another banner image.`);
+    }else{
+      const placeholder = 'BANNER_IMG_PLACEHOLDER_TOKEN';
+      bannerPlaceholders[placeholder] = bannerDataUri;
+      guidanceLines.unshift(`- An image banner is ready. Insert it as <img src="${placeholder}" ...> prominently as the hero visual. Do not generate or invent another banner image.`);
+    }
+  }
+
+  roleHintsBlock = guidanceLines.length
+    ? `\n\nContent role hints (the user tagged some lines as {Label} | Content to guide structure — follow these):\n${guidanceLines.join('\n')}`
+    : '';
+
+  const effectiveLeftLogo = logoLeftDataUri;
+  const effectiveRightLogo = logoRightDataUri;
+  const logoInstruction = (effectiveLeftLogo || effectiveRightLogo)
+    ? `\n\nIMPORTANT: Do not create your own logo row/header. The app will inject the exact top logo row after generation. Do not duplicate or move these logos. Left logo placeholder: ${effectiveLeftLogo ? LOGO_LEFT_PLACEHOLDER : 'not supplied'}. Right logo placeholder: ${effectiveRightLogo ? LOGO_RIGHT_PLACEHOLDER : 'not supplied'}. Keep the email content/design below the logo row.`
+    : '';
+
+  let prompt;
+  if(contextHtml){
+    prompt = `You previously built this complete HTML email:
+
+"""${contextHtml}"""
+
+The source content it should be based on (may have been edited):
+"""${cleanedRaw}"""
+
+Apply this change requested by the user: "${instructions || 'Refine and improve the design.'}"${logoInstruction}${roleHintsBlock}${brandPaletteDirective}
+
+Keep everything else about the email consistent with the current version unless the instruction implies a full redesign. Preserve any existing image placeholder tokens exactly; do not replace them with external image URLs. Return ONLY the complete, updated, raw HTML for the email — no markdown fences, no commentary, no explanation.`;
+  } else {
+    const style = pickStyle();
+    let colorLine = brandPalette
+      ? `Color direction: use the official website palette — ${brandPalette.colors.map(c=>c.hex).slice(0,5).join(', ')}. Keep these brand colours authoritative and use neutral backgrounds with accessible contrast.`
+      : `Color direction: ${style.palette}.`;
+    if(useImageBanner && !brandPalette){
+      const bc = await dominantBannerColors(bannerDataUri);
+      if(bc.length) colorLine = `Color direction: the hero image is already chosen, so build the colour scheme AROUND ITS OWN COLOURS — primary ${bc[0]}${bc[1] ? ', accent ' + bc[1] : ''} — plus clean neutrals (white / off-white / dark text). Do not introduce clashing extra brand colours.`;
+    }
+    prompt = `You are an expert email marketing designer. Build a complete, responsive, email-client-safe HTML newsletter/marketing email from the raw content below.
+
+Technical requirements:
+- Table-based layout (role="presentation" tables), inline CSS only, max-width 600px, centered.
+- Include MSO conditional comments for Outlook compatibility (xmlns:v, xmlns:o, OfficeDocumentSettings).
+- Include a mobile media query (max-width:600px) that adjusts padding and headline size.
+- Include a preheader (hidden preview text), a prominent hero/banner image when a banner placeholder is supplied, headline, intro copy, a list of item/program blocks (title, short description, CTA link) if the content has multiple items, and a minimal footer. The app will inject the exact unsubscribe footer after generation. Do not add any view-in-browser link.
+- Never put a generic stock-photo URL or external image URL in the output when a banner placeholder is supplied; use the placeholder exactly.
+
+Visual design direction for THIS email (commit fully to this — don't fall back to a generic plain template, and do NOT default to a stack of white rounded cards with pill buttons unless the direction below explicitly says so):
+LAYOUT: ${style.archetype}
+${colorLine}
+TYPOGRAPHY (use these exact font-family stacks inline, with their fallbacks): ${style.fonts}
+SHAPE LANGUAGE: ${style.shape}.
+Make this email look clearly different from a typical newsletter: distinctive hero treatment, distinctive section styling, and a colour/typography feel that matches the direction above.
+
+User's own style/content instructions, if any (these take priority over the direction above where they conflict): "${instructions || 'None given — just follow the visual direction above.'}"${logoInstruction}${roleHintsBlock}${brandPaletteDirective}
+
+RAW CONTENT:
+"""${cleanedRaw}"""
+
+Return ONLY the complete raw HTML, starting with <!DOCTYPE html> — no markdown fences, no commentary, no explanation.`;
+  }
+
+  try{
+    let html = await callGeminiDirect(prompt);
+    html = html.replace(/^```(?:html)?/i,'').replace(/```$/,'').trim();
+
+    // Swap the real image data back in for the placeholder tokens.
+    // Preserve any AI placeholders, but the actual logo row is injected deterministically below.
+    html = html.split(LOGO_LEFT_PLACEHOLDER).join('');
+    html = html.split(LOGO_RIGHT_PLACEHOLDER).join('');
+    for(const item of previousImages){
+      html = html.split(item.token).join(item.data);
+    }
+    for(const [placeholder, dataUri] of Object.entries(bannerPlaceholders)){
+      html = html.split(placeholder).join(dataUri);
+    }
+
+    html = normalizeEmailFooter(html);
+    html = injectTopLogoRow(html);
+    currentHtml = markHeroImage(html);
+    renderOutput();
+    document.getElementById('resetLink').style.display = 'block';
+    document.getElementById('shuffleLink').style.display = 'block';
+    document.getElementById('refineLink').style.display = 'block';
+    showStatus('Mailer generated by Ai-2. Add another instruction to keep refining, or try a different design.', 'ok');
+    if(typeof showStep === 'function') showStep(4);
+    showToast('Mailer generated');
+  }catch(err){
+    showStatus('Could not generate — see details below.', 'error');
+    logGenIssue(`Mailer generation failed:\n${err.message}`);
+  }finally{
+    btn.disabled = false;
+    hideBusy();
+  }
+}
+
+const previewFrame = document.getElementById('previewFrame');
+const codeBox = document.getElementById('codeBox');
+const emptyState = document.getElementById('emptyState');
+
+
+function renderOutput(){
+  if(!currentHtml) return;
+  previewFrame.srcdoc = currentHtml;
+  codeBox.value = currentHtml;
+  emptyState.style.display = 'none';
+  previewFrame.style.display = codeBox.classList.contains('visible') ? 'none' : 'block';
+}
+
+/* ---------- In-preview text editing (no AI call — direct DOM edits) ---------- */
+let textEditMode = false;
+
+function toggleTextEdit(){
+  if(!currentHtml){ showToast('Generate a mailer first'); return; }
+  textEditMode = !textEditMode;
+  const doc = previewFrame.contentDocument;
+  if(doc && doc.body){
+    doc.body.contentEditable = textEditMode ? 'true' : 'false';
+    doc.body.style.outline = textEditMode ? '2px dashed #16a34a' : 'none';
+  }
+  document.getElementById('editModeBanner').style.display = textEditMode ? 'block' : 'none';
+  setEditBtnState(textEditMode);
+  document.getElementById('saveEditBtn').style.display = textEditMode ? 'inline-flex' : 'none';
+  // Force desktop preview view while editing (code view can't be edited this way)
+  if(textEditMode && codeBox.classList.contains('visible')){
+    previewFrame.style.display = 'block';
+    codeBox.classList.remove('visible');
+    setActive(document.getElementById('btnDesktop'));
+  }
+}
+
+function saveTextEdit(){
+  const doc = previewFrame.contentDocument;
+  if(!doc){ showToast('Nothing to save'); return; }
+  // Turn edit mode off BEFORE serialising, otherwise contenteditable + the green outline leak into the saved email.
+  doc.body.removeAttribute('contenteditable');
+  doc.body.style.outline = '';
+  if(!doc.body.getAttribute('style')) doc.body.removeAttribute('style');
+  const doctype = doc.doctype ? new XMLSerializer().serializeToString(doc.doctype) : '<!DOCTYPE html>';
+  const htmlTag = doc.documentElement.outerHTML;
+  currentHtml = doctype + '\n' + htmlTag;
+
+  doc.body.contentEditable = 'false';
+  doc.body.style.outline = 'none';
+  textEditMode = false;
+  document.getElementById('editModeBanner').style.display = 'none';
+  setEditBtnState(false);
+  document.getElementById('saveEditBtn').style.display = 'none';
+
+  codeBox.value = currentHtml;
+  showStatus('Text edits saved.', 'ok');
+  showToast('Edits saved');
+}
+
+document.getElementById('btnDesktop').addEventListener('click', e=>{
+  previewFrame.classList.remove('mobile');
+  codeBox.classList.remove('visible');
+  if(currentHtml) previewFrame.style.display='block';
+  setActive(e.target);
+});
+document.getElementById('btnMobile').addEventListener('click', e=>{
+  previewFrame.classList.add('mobile');
+  codeBox.classList.remove('visible');
+  if(currentHtml) previewFrame.style.display='block';
+  setActive(e.target);
+});
+document.getElementById('btnCode').addEventListener('click', e=>{
+  previewFrame.style.display='none'; codeBox.classList.add('visible');
+  setActive(e.target);
+});
+function setActive(btn){
+  document.querySelectorAll('.viewport-toggle button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  if(!currentHtml){ showToast('Generate a mailer first'); return; }
+  navigator.clipboard.writeText(currentHtml).then(()=> showToast('HTML copied to clipboard'))
+    .catch(()=>{ codeBox.value = currentHtml; codeBox.select(); document.execCommand('copy'); showToast('HTML copied to clipboard'); });
+});
+restoreLastBanner();
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  if(!currentHtml){ showToast('Generate a mailer first'); return; }
+  const blob = new Blob([currentHtml], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'text-to-mailer.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Downloaded text-to-mailer.html');
+});
+
+
+/* ============ 3 UNIQUE EMAILERS ============
+   One click -> three complete emailers. Each one gets its own layout, palette, typography, shape
+   language AND its own banner (different visual style, different colours). Banners are made one at
+   a time by Ai-1 (the bridge handles a single image at a time); each email is written by Ai-2 as soon
+   as its banner is ready, so the work overlaps. If Ai-1 is unavailable, a built-in designed banner is
+   drawn instead (three different compositions) so every emailer still has a unique banner. */
+const TRIO_BANNER_TONES = ['bold','light','light','bold','light','dark','bold','bold','bold','light','light','dark','light','bold'];
+const TRIO_BANNER_LABELS = ['Photo poster on a colour curve','Airy campus & globe','Flat vector illustration','Outdoor photo + colour panel','Corporate cut-out flyer','Dark luxury with gold','Giant typographic poster','3D clay / isometric icons','Duotone cut-out & stickers','Paper-cut collage','Swiss minimal grid','Mesh-gradient tech glass','Warm editorial photo','Diagonal split-screen'];
+
+let trio = { running:false, cancel:false, plans:[], items:[], ctx:null, bridge:false, notice:'' };
+
+const trioTitleCase = s => String(s).toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+const trioHexes = t => (String(t).match(/#[0-9A-Fa-f]{6}/g) || []).map(h => h.toUpperCase());
+const trioLum = h => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+
+/* ---- 1. Plan 2–4 directions that are guaranteed to differ ---- */
+function planTrio(count=3, brandPalette=null){
+  count = Math.max(2, Math.min(4, Number(count) || 3));
+  const arch = [];
+  for(let k = 0; k < count; k++){
+    let a, guard = 0;
+    do{ a = bagDraw('archetype', STYLE_ARCHETYPES.length); }while(arch.includes(a) && guard++ < 24);
+    if(arch.includes(a)) a = STYLE_ARCHETYPES.findIndex((_, i) => !arch.includes(i));
+    arch.push(a);
+  }
+  // Prefer varied tones when enough directions are requested.
+  const toneCount = () => new Set(arch.map(i => STYLE_ARCHETYPES[i].tone)).size;
+  for(let t = 0; t < 35 && toneCount() < Math.min(count, 4); t++){
+    const slot = 1 + Math.floor(Math.random() * Math.max(1, count - 1));
+    const used = new Set(arch.filter((_, k) => k !== slot).map(i => STYLE_ARCHETYPES[i].tone));
+    const cands = STYLE_ARCHETYPES.map((a, i) => (!arch.includes(i) && !used.has(a.tone)) ? i : -1).filter(i => i >= 0);
+    if(cands.length) arch[slot] = cands[Math.floor(Math.random() * cands.length)];
+  }
+  const usedPal = [], usedFont = [], usedShape = [], usedBan = [];
+  const siteColors = brandPalette?.colors?.map(c => String(c.hex || c).toUpperCase()).filter(c => /^#[0-9A-F]{6}$/.test(c)).slice(0,5) || [];
+  return arch.map((ai, k) => {
+    const a = STYLE_ARCHETYPES[ai];
+    const palOk = COLOR_PALETTES.map((p, i) => ((a.tone === 'any' || p.tone === a.tone) && !usedPal.includes(i)) ? i : -1).filter(i => i >= 0);
+    const pi = historyDraw('palette', COLOR_PALETTES.length, 5, palOk.length ? palOk : COLOR_PALETTES.map((_, i) => i).filter(i => !usedPal.includes(i)));
+    let fontOk = FONT_PAIRINGS.map((f, i) => (a.fonts.includes(f.kind) && !usedFont.includes(i)) ? i : -1).filter(i => i >= 0);
+    if(!fontOk.length) fontOk = FONT_PAIRINGS.map((_, i) => i).filter(i => !usedFont.includes(i));
+    const fi = historyDraw('font', FONT_PAIRINGS.length, 4, fontOk);
+    const si = historyDraw('shape', SHAPE_LANGUAGES.length, 3, SHAPE_LANGUAGES.map((_, i) => i).filter(i => !usedShape.includes(i)));
+    let banOk = BANNER_VARIATIONS.map((_, i) => ((a.tone === 'any' || TRIO_BANNER_TONES[i] === a.tone) && !usedBan.includes(i)) ? i : -1).filter(i => i >= 0);
+    if(!banOk.length) banOk = BANNER_VARIATIONS.map((_, i) => i).filter(i => !usedBan.includes(i));
+    const bi = bagDraw('banner', BANNER_VARIATIONS.length, banOk);
+    usedPal.push(pi); usedFont.push(fi); usedShape.push(si); usedBan.push(bi);
+    let paletteText = COLOR_PALETTES[pi].text;
+    let hexes = trioHexes(paletteText);
+    if(siteColors.length){
+      const primary = siteColors[k % siteColors.length];
+      const ordered = [primary, ...siteColors.filter(c=>c!==primary)];
+      paletteText = `Official brand palette sampled from ${brandPalette.domain || brandPalette.url}: primary ${primary}; supporting brand colours ${ordered.slice(1).join(', ') || primary}; pair with neutral white/cream backgrounds and accessible dark text. Use only this site's colours; vary layout, composition and type to make the designs distinct.`;
+      hexes = siteColors;
+    }
+    return {
+      k, archName: trioTitleCase(a.text.split(':')[0]), archText: a.text,
+      palette: paletteText, paletteTone: siteColors.length ? 'any' : COLOR_PALETTES[pi].tone, hexes,
+      fonts: FONT_PAIRINGS[fi].text, fontKind: FONT_PAIRINGS[fi].kind, shape: SHAPE_LANGUAGES[si],
+      bannerText: BANNER_VARIATIONS[bi], bannerLabel: TRIO_BANNER_LABELS[bi] || 'Custom banner'
+    };
+  });
+}
+/* ---- 2. Shared inputs (read once per run) ---- */
+function trioContext(){
+  const raw = document.getElementById('rawText').value.trim();
+  const parsed = parseTaggedLines(raw);
+  const explicit = parsed.imageTags.length ? parsed.imageTags[0].content.trim() : '';
+  const heroMessage = explicit || getBannerText(raw, parsed);
+  const hints = parsed.roleHints.map(h => `- "${h.label}": "${h.content}" — treat this line according to its label (e.g. use it as the ${h.label}).`);
+  const hasLogos = !!(logoLeftDataUri || logoRightDataUri);
+  return {
+    cleanedRaw: parsed.cleanedRaw, heroMessage,
+    websiteUrl: getBrandWebsiteUrl(raw, document.getElementById('instructionField').value.trim()),
+    instructions: document.getElementById('instructionField').value.trim(),
+    hintsBlock: hints.length ? `\n\nContent role hints (the user tagged some lines as {Label} | Content to guide structure — follow these):\n${hints.join('\n')}` : '',
+    logoInstruction: hasLogos
+      ? `\n\nIMPORTANT: Do not create your own logo row/header. The app will inject the exact top logo row after generation. Do not duplicate or move these logos. Left logo placeholder: ${logoLeftDataUri ? 'LOGO_LEFT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY' : 'not supplied'}. Right logo placeholder: ${logoRightDataUri ? 'LOGO_RIGHT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY' : 'not supplied'}. Keep the email content/design below the logo row.`
+      : ''
+  };
+}
+
+function trioBannerPrompt(i){
+  const plan = trio.plans[i];
+  const others = trio.plans.filter((_, k) => k !== i).map(p => p.bannerLabel).join(' and ');
+  return `Create ONE premium marketing-email hero/banner image for this campaign.\n\nEXACT HERO/BANNER MESSAGE:\n${trio.ctx.heroMessage}\n\nVISUAL DIRECTION:\n${plan.bannerText}\n\nCOLOUR PALETTE (make these exact hex colours the dominant colours of the image): ${plan.palette}\n\nREQUIREMENTS:\n- Landscape email hero, target maximum width 650 pixels. The final image will be optimized client-side to stay under 1 MB while preserving visual quality.\n- This is banner ${i + 1} of ${trio.plans.length} for the same campaign. The other banners use these directions: ${others || 'none'}. This one must look completely different from them in composition, subject, typography and colour.\n- The exact supplied hero/banner message is the only marketing copy allowed in the image. Do not add any other copy.\n- If the supplied text is too long, keep every word but use clean line breaks and fit it comfortably inside safe margins.\n- Strong focal visual, polished professional aesthetic.\n- Do not invent dates, logos, statistics, prices, claims, brands, or extra promotional copy.\n- Do not use fake logos.\n- Keep the primary text highly legible on desktop and mobile crop.\n- No mock email frame, no browser UI, no watermark.\n- Return the finished image only.`;
+}
+
+/* ---- 3. Banners ---- */
+async function trioCheckBridge(){
+  try{
+    const r = await fetch(CHATGPT_BRIDGE + '/api/startup-check', { cache:'no-store', signal: AbortSignal.timeout(45000) });
+    const d = await r.json().catch(() => ({}));
+    return !!(r.ok && d.ok && d.loggedIn);
+  }catch(e){ return false; }
+}
+
+async function trioAi1Banner(i){
+  const response = await fetch(CHATGPT_BRIDGE + '/api/chatgpt-banner', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ prompt: trioBannerPrompt(i), bannerText: trio.ctx.heroMessage })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if(!response.ok || !payload.ok) throw new Error(payload.message || `Ai-1 bridge returned HTTP ${response.status}`);
+  const imgResp = await fetch(CHATGPT_BRIDGE + payload.imageUrl + '?v=' + Date.now());
+  if(!imgResp.ok) throw new Error('Generated image was saved, but the app could not load the local image file.');
+  const dataUri = await optimizeBannerBlob(await imgResp.blob());
+  await persistOptimizedBanner(dataUri, payload.filename);
+  return dataUri;
+}
+
+/* Built-in banner used only when Ai-1 is unavailable; composition varies by slot. */
+async function trioFallbackBanner(plan, k, text){
+  const W = 1300, H = 560, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), hx = plan.hexes.length ? plan.hexes : ['#2456E5', '#38A8FF'];
+  let bg, accent, fg;
+  if(plan.paletteTone === 'light'){
+    const sorted = hx.slice().sort((a, b) => trioLum(a) - trioLum(b));
+    bg = '#F7F7F5'; fg = sorted[0]; accent = hx.find(h => h !== fg && trioLum(h) < 0.85) || fg;
+  }else{
+    bg = hx[0]; fg = trioLum(bg) > 0.6 ? '#1D1D1F' : '#FFFFFF';
+    accent = hx.find(h => h !== bg && Math.abs(trioLum(h) - trioLum(bg)) > 0.25) || '#FFFFFF';
+  }
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const style = k % 3;
+  const fam = style === 0 ? '"Arial Black","Helvetica Neue",Arial,sans-serif' : style === 1 ? '"Trebuchet MS",Arial,sans-serif' : 'Georgia,"Times New Roman",serif';
+  let x0 = 80, maxW = 760, align = 'left';
+  g.globalAlpha = 1;
+  if(style === 0){            // bold diagonal block
+    g.fillStyle = accent; g.beginPath(); g.moveTo(W * 0.72, 0); g.lineTo(W, 0); g.lineTo(W, H); g.lineTo(W * 0.58, H); g.closePath(); g.fill();
+    g.globalAlpha = .35; g.fillStyle = fg; g.beginPath(); g.moveTo(W * 0.8, 0); g.lineTo(W, 0); g.lineTo(W, H * 0.55); g.closePath(); g.fill(); g.globalAlpha = 1;
+    maxW = W * 0.6;
+  }else if(style === 1){      // overlapping circles
+    g.globalAlpha = .22; g.fillStyle = accent;
+    [[W * .86, H * .2, 230], [W * .72, H * .95, 190], [W * .06, H * 1.05, 150]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); });
+    g.globalAlpha = 1; g.fillStyle = accent; g.beginPath(); g.arc(W * .9, H * .78, 46, 0, 7); g.fill();
+    g.beginPath(); g.arc(W * .8, H * .12, 22, 0, 7); g.fill();
+    g.fillRect(x0, H - 92, 150, 12); maxW = W * 0.68;
+  }else{                      // framed, centred
+    g.strokeStyle = accent; g.lineWidth = 4; g.strokeRect(34, 34, W - 68, H - 68);
+    g.lineWidth = 1.5; g.strokeRect(52, 52, W - 104, H - 104);
+    g.fillStyle = accent; g.fillRect(W / 2 - 60, 96, 120, 5); g.fillRect(W / 2 - 60, H - 101, 120, 5);
+    x0 = W / 2; maxW = W - 300; align = 'center';
+  }
+  const words = String(text || '').trim().split(/\s+/);
+  let size = 118, lines = [];
+  for(; size >= 40; size -= 4){
+    g.font = `${style === 2 ? '700' : '900'} ${size}px ${fam}`; lines = []; let cur = '';
+    for(const w of words){ const t = cur ? cur + ' ' + w : w; if(g.measureText(style === 2 ? t : t.toUpperCase()).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t; }
+    if(cur) lines.push(cur);
+    if(lines.length <= 4 && lines.length * size * 1.12 <= H - 220) break;
+  }
+  g.fillStyle = fg; g.textAlign = align; g.textBaseline = 'middle';
+  const lh = size * 1.12, top = (H - lines.length * lh) / 2 + lh / 2;
+  lines.forEach((ln, n) => g.fillText(style === 2 ? ln : ln.toUpperCase(), x0, top + n * lh));
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  return optimizeBannerBlob(blob);
+}
+
+async function trioMakeBanner(i, forceAi1){
+  const it = trio.items[i], plan = trio.plans[i];
+  it.state = 'banner'; it.html = null; it.err = null; it.msg = 'Generating banner with Ai-1…'; renderTrio();
+  let dataUri = null, src = 'ai-1';
+  if(trio.bridge || forceAi1){
+    for(let attempt = 1; attempt <= 2 && !dataUri; attempt++){
+      try{
+        const d = await trioAi1Banner(i);
+        if(trio.items.some((o, k) => k !== i && o.banner === d)) throw new Error('Ai-1 returned the same image as another design.');
+        dataUri = d;
+      }catch(e){
+        const m = String(e && e.message || e);
+        it.err = m;
+        if(/Timed out|Failed to fetch|NetworkError/i.test(m)) break;
+      }
+    }
+  }
+  if(!dataUri){
+    src = 'fallback';
+    dataUri = await trioFallbackBanner(plan, i, trio.ctx.heroMessage);
+    if(it.err) logGenIssue(`Design ${i + 1}: Ai-1 banner failed, used the built-in banner instead.\n${it.err}`);
+  }
+  it.banner = dataUri; it.bannerSrc = src; renderTrio();
+}
+
+/* ---- 4. Email (Ai-2) ---- */
+async function trioMakeMailer(i){
+  const it = trio.items[i], plan = trio.plans[i], ctx = trio.ctx;
+  it.state = 'email'; it.err = null; it.msg = 'Ai-2 is writing the email…'; renderTrio();
+  try{
+    const bc = await dominantBannerColors(it.banner);
+    const colorLine = ctx.brandPalette
+      ? `Color direction: use the extracted official website brand palette as authoritative: ${plan.palette}. Harmonize the hero image around these brand colours and use clean neutral backgrounds with accessible contrast.`
+      : bc.length
+        ? `Color direction: the hero image is already chosen, so build the colour scheme AROUND ITS OWN COLOURS — primary ${bc[0]}${bc[1] ? ', accent ' + bc[1] : ''} — plus clean neutrals (white / off-white / dark text). Keep the light-or-dark character that the LAYOUT below requires. Do not introduce clashing extra brand colours.`
+        : `Color direction: ${plan.palette}.`;
+    const others = trio.plans.filter((_, k) => k !== i).map(p => `"${p.archName}"`).join(' and ');
+    const prompt = `You are an expert email marketing designer. Build a complete, responsive, email-client-safe HTML newsletter/marketing email from the raw content below.
+
+Technical requirements:
+- Table-based layout (role="presentation" tables), inline CSS only, max-width 600px, centered.
+- Include MSO conditional comments for Outlook compatibility (xmlns:v, xmlns:o, OfficeDocumentSettings).
+- Include a mobile media query (max-width:600px) that adjusts padding and headline size.
+- Include a preheader (hidden preview text), a prominent hero/banner image, headline, intro copy, a list of item/program blocks (title, short description, CTA link) if the content has multiple items, and a minimal footer. The app will inject the exact unsubscribe footer after generation. Do not add any view-in-browser link.
+- An image banner is ready. Insert it as <img src="BANNER_IMG_PLACEHOLDER_TOKEN" ...> prominently as the hero visual. Do not generate or invent another banner image. Never put a generic stock-photo URL or external image URL in the output.
+
+THIS IS DESIGN ${i + 1} OF ${trio.plans.length}. The other design directions are ${others || 'none'}. Yours must be structurally different from them: different section order, different relationship between hero and headline, different component shapes, different CTA style and a different visual hierarchy. Commit fully to the direction below — do NOT default to a stack of white rounded cards with pill buttons unless the direction explicitly says so.
+LAYOUT: ${plan.archText}
+${colorLine}
+TYPOGRAPHY (use these exact font-family stacks inline, with their fallbacks): ${plan.fonts}
+SHAPE LANGUAGE: ${plan.shape}.
+
+User's own style/content instructions, if any (these take priority over the direction above where they conflict): "${ctx.instructions || 'None given — just follow the visual direction above.'}"${ctx.logoInstruction}${ctx.hintsBlock}${brandPalettePrompt(ctx.brandPalette)}
+
+RAW CONTENT:
+"""${ctx.cleanedRaw}"""
+
+Return ONLY the complete raw HTML, starting with <!DOCTYPE html> — no markdown fences, no commentary, no explanation.`;
+
+    let html = await callGeminiDirect(prompt);
+    html = html.replace(/^```(?:html)?/i, '').replace(/```$/, '').trim();
+    html = html.split('LOGO_LEFT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY').join('').split('LOGO_RIGHT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY').join('');
+    html = html.split('BANNER_IMG_PLACEHOLDER_TOKEN').join(it.banner);
+    if(!html.includes(it.banner)) html = replaceHeroImage(html, it.banner, '__none__'); // model dropped the token: put the banner back
+    html = normalizeEmailFooter(html);
+    html = injectTopLogoRow(html);
+    html = trioMarkHero(html, it.banner);
+    it.html = html; it.state = 'done'; it.msg = 'Ready';
+  }catch(e){
+    it.state = 'error'; it.msg = 'Email generation failed'; it.err = String(e && e.message || e);
+    logGenIssue(`Design ${i + 1} email generation failed:\n${it.err}`);
+  }
+  renderTrio();
+}
+
+function trioMarkHero(html, banner){
+  try{
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const hero = Array.from(doc.querySelectorAll('img')).find(im => !im.hasAttribute('data-ttm-logo') && im.getAttribute('src') === banner);
+    if(!hero) return html;
+    hero.setAttribute('data-ttm-hero', '1');
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }catch(e){ return html; }
+}
+
+/* ---- 5. Orchestration ---- */
+let desiredTrioCount = 3;
+function syncTrioCount(value){
+  const n = Math.max(2, Math.min(4, Number(value) || 3));
+  desiredTrioCount = n;
+  ['trioCount3','trioCount4'].forEach(id=>{ const el=document.getElementById(id); if(el && el.value !== String(n)) el.value=String(n); });
+}
+function toggleMultiMailerSettings(){
+  const enabled = !!document.getElementById('multiMailerEnabled')?.checked;
+  const panel = document.getElementById('multiMailerSettings');
+  if(panel) panel.style.display = enabled ? 'flex' : 'none';
+}
+function toggleFinalMultiOptions(){
+  const panel = document.getElementById('finalMultiSettings');
+  if(!panel) return;
+  panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
+}
+function startTrioFromReview(){
+  if(!document.getElementById('multiMailerEnabled')?.checked){
+    showToast('Enable “Generate multiple unique emailers” first.');
+    return;
+  }
+  syncTrioCount(document.getElementById('trioCount3')?.value || desiredTrioCount);
+  startTrio();
+}
+function startTrioFromFinal(){
+  syncTrioCount(document.getElementById('trioCount4')?.value || desiredTrioCount);
+  startTrio();
+}
+async function startTrio(){
+  if(trio.running){
+    if(trio.cancel){ showToast('Finishing the current step — try again in a moment'); return; }
+    openTrio(); return;
+  }
+  const raw = document.getElementById('rawText').value.trim();
+  if(!raw){ showStatus('Paste some text first.', 'error'); showStep(1); return; }
+  if(!getApiKey()){ showStatus('Add your Ai-2 API key in Settings (⚙️) first.', 'error'); openSettings(); return; }
+  if(chatGPTGenerationBusy){ showToast('Wait for the current Ai-1 banner to finish'); return; }
+  if(textEditMode) saveTextEdit();
+  clearGenLog();
+
+  const requestedCount = Math.max(2, Math.min(4, Number(desiredTrioCount) || 3));
+  trio.ctx = trioContext();
+  trio.ctx.brandPalette = null;
+  trio.plans = []; trio.items = [];
+  trio.running = true; trio.cancel = false; trio.notice = '';
+  chatGPTGenerationBusy = true;
+  const overlay = document.getElementById('trioOverlay');
+  const sub = document.getElementById('trioSub');
+  if(sub) sub.textContent = 'Preparing designs…';
+  openTrio();
+  const titleEl = document.getElementById('trioTitleText'); if(titleEl) titleEl.textContent = `🎨 ${requestedCount} Unique Emailers`;
+  const regenEl = document.getElementById('trioRegenBtn'); if(regenEl) regenEl.textContent = `🔄 Regenerate all ${requestedCount}`;
+  showStatus(`Generating ${requestedCount} unique emailers…`, '');
+
+  try{
+    if(trio.ctx.websiteUrl){
+      if(sub) sub.textContent = `Reading brand colours from ${new URL(trio.ctx.websiteUrl).hostname}…`;
+      trio.ctx.brandPalette = await resolveBrandPalette(raw, trio.ctx.instructions, true);
+      if(!trio.ctx.brandPalette) trio.notice = 'The brand website could not be read, so automatic palettes will be used instead.';
+    }
+    trio.plans = planTrio(requestedCount, trio.ctx.brandPalette);
+    trio.items = trio.plans.map(() => ({ state:'queued', msg:'Waiting…', html:null, banner:null, bannerSrc:null, err:null }));
+    buildTrioCards(); renderTrio(); openTrio();
+    if(sub) sub.textContent = 'Checking the Ai-1 session…';
+    trio.bridge = await trioCheckBridge();
+    if(!trio.bridge) trio.notice = (trio.notice ? trio.notice + ' ' : '') + 'Ai-1 is not reachable or not signed in, so built-in designed banners are used for now. Start the bridge and sign in once, then use “Retry with Ai-1” on any card.';
+    renderTrio();
+    const mailers = [];
+    for(let i = 0; i < trio.plans.length; i++){
+      if(trio.cancel){ trio.items.slice(i).forEach(x => { x.state = 'cancelled'; x.msg = 'Stopped'; }); break; }
+      await trioMakeBanner(i);
+      mailers.push(trioMakeMailer(i));      // email is written while the next banner is generated
+    }
+    await Promise.all(mailers);
+    const ok = trio.items.filter(x => x.state === 'done').length;
+    showStatus(`${ok} of ${requestedCount} emailers ready — compare them from the Mailer step with “View generated designs”.`, ok ? 'ok' : 'error');
+  }catch(e){
+    logGenIssue(`${requestedCount}-emailer run failed:\n` + String(e && e.message || e));
+    showStatus(`Could not finish all ${requestedCount} emailers — see details below.`, 'error');
+  }finally{
+    trio.running = false; trio.cancel = false; chatGPTGenerationBusy = false;
+    renderTrio();
+    document.querySelectorAll('.trio-view-btn').forEach(b => {
+      b.style.display = trio.items.some(x => x.html) ? '' : 'none';
+      b.title = `View ${trio.items.length} generated designs`;
+      b.setAttribute('aria-label', `View ${trio.items.length} generated designs`);
+    });
+  }
+}
+async function trioRetry(i, kind){
+  const it = trio.items[i];
+  if(!it || trio.running || chatGPTGenerationBusy){ showToast('Please wait for the current job to finish'); return; }
+  trio.running = true; chatGPTGenerationBusy = true; renderTrio();
+  try{
+    if(kind === 'banner') await trioMakeBanner(i, true);
+    await trioMakeMailer(i);
+  }finally{
+    trio.running = false; chatGPTGenerationBusy = false; renderTrio();
+    document.querySelectorAll('.trio-view-btn').forEach(b => b.style.display = trio.items.some(x => x.html) ? '' : 'none');
+  }
+}
+
+function cancelTrio(){
+  if(!trio.running) return;
+  trio.cancel = true; renderTrio();
+  showToast('Stopping after the current banner');
+}
+
+function resetTrio(){
+  trio.cancel = true; trio.items = []; trio.plans = [];
+  const grid = document.getElementById('trioGrid'); if(grid) grid.innerHTML = '';
+  document.querySelectorAll('.trio-view-btn').forEach(b => b.style.display = 'none');
+  closeTrio();
+}
+
+/* ---- 6. UI ---- */
+function openTrio(){
+  document.getElementById('trioOverlay').style.display = 'flex';
+  setTimeout(trioFitAll, 30);
+}
+function closeTrio(){ const o = document.getElementById('trioOverlay'); if(o) o.style.display = 'none'; }
+
+function buildTrioCards(){
+  const grid = document.getElementById('trioGrid');
+  const titleEl = document.getElementById('trioTitleText');
+  if(titleEl) titleEl.textContent = `🎨 ${trio.plans.length} Unique Emailers`;
+  const regenEl = document.getElementById('trioRegenBtn');
+  if(regenEl) regenEl.textContent = `🔄 Regenerate all ${trio.plans.length}`;
+  grid.innerHTML = trio.plans.map((p, i) => `
+    <div class="trio-card">
+      <div class="trio-card-top">
+        <div><div class="trio-num">Design ${i + 1}</div><div class="trio-name">${escHtml(p.archName)}</div></div>
+        <div class="trio-sw">${p.hexes.slice(0, 4).map(h => `<i style="background:${h}"></i>`).join('')}</div>
+      </div>
+      <div class="trio-chips"><span>Banner: ${escHtml(p.bannerLabel)}</span><span>${escHtml(p.fontKind)} type</span></div>
+      <div class="trio-banner"><div class="trio-skel"></div><img alt="Banner ${i + 1}" style="display:none"></div>
+      <div class="trio-src"></div>
+      <div class="trio-state queued"></div>
+      <div class="trio-prev"><div class="trio-prev-inner"><div class="trio-skel tall"></div><iframe style="display:none" title="Design ${i + 1} preview"></iframe></div></div>
+      <div class="trio-err"></div>
+      <div class="trio-btns">
+        <button class="primary-btn t-use" onclick="useTrioDesign(${i})">Use this design</button>
+        <button class="ghost-btn t-copy" onclick="trioCopy(${i})">Copy HTML</button>
+        <button class="ghost-btn t-dl" onclick="trioDownload(${i})">Download</button>
+        <button class="ghost-btn t-rb" onclick="trioRetry(${i},'banner')">Retry with Ai-1</button>
+        <button class="ghost-btn t-re" onclick="trioRetry(${i},'email')">Retry email</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderTrio(){
+  const grid = document.getElementById('trioGrid');
+  const done = trio.items.filter(x => x.state === 'done').length;
+  const sub = document.getElementById('trioSub');
+  if(sub && trio.items.length){
+    sub.textContent = trio.running
+      ? `Working… ${done} of ${trio.plans.length} emailers ready. Ai-1 makes the banners one at a time (about 1–3 minutes each), so keep this tab open.`
+      : `${done} of ${trio.plans.length} emailers ready. Compare them, then click “Use this design” to open one for refining, saving or exporting.`;
+  }
+  const note = document.getElementById('trioNotice');
+  if(note){ note.style.display = trio.notice ? 'block' : 'none'; note.textContent = trio.notice; }
+  const stop = document.getElementById('trioCancelBtn'), regen = document.getElementById('trioRegenBtn');
+  if(stop){ stop.style.display = trio.running ? '' : 'none'; stop.textContent = trio.cancel ? 'Stopping…' : 'Stop'; }
+  if(regen) regen.style.display = trio.running ? 'none' : '';
+  trio.items.forEach((it, i) => {
+    const card = grid.children[i]; if(!card) return;
+    const q = s => card.querySelector(s);
+    const st = q('.trio-state'); st.textContent = it.msg; st.className = 'trio-state ' + it.state;
+    const img = q('.trio-banner img'), skel = q('.trio-banner .trio-skel');
+    if(it.banner){
+      if(img.dataset.src !== String(it.banner.length) + it.banner.slice(-40)){ img.src = it.banner; img.dataset.src = String(it.banner.length) + it.banner.slice(-40); }
+      img.style.display = 'block'; skel.style.display = 'none';
+    }else{ img.style.display = 'none'; skel.style.display = 'block'; }
+    q('.trio-src').textContent = it.banner ? (it.bannerSrc === 'ai-1' ? '🖼️ Banner by Ai-1' : '🖼️ Built-in banner (Ai-1 was unavailable)') : '';
+    const fr = q('iframe'), pskel = q('.trio-prev .trio-skel');
+    if(it.html){
+      if(fr._html !== it.html){ fr._html = it.html; fr.onload = () => trioFit(i); fr.srcdoc = it.html; }
+      fr.style.display = 'block'; pskel.style.display = 'none';
+    }else{ fr._html = null; fr.style.display = 'none'; pskel.style.display = 'block'; }
+    const er = q('.trio-err');
+    er.style.display = it.state === 'error' ? 'block' : 'none'; er.textContent = it.state === 'error' ? (it.err || '') : '';
+    q('.t-use').disabled = q('.t-copy').disabled = q('.t-dl').disabled = !it.html;
+    q('.t-rb').style.display = (it.bannerSrc === 'fallback' && !trio.running) ? '' : 'none';
+    q('.t-re').style.display = (it.state === 'error' && it.banner && !trio.running) ? '' : 'none';
+  });
+}
+
+function trioFit(i){
+  const card = document.getElementById('trioGrid').children[i]; if(!card) return;
+  const box = card.querySelector('.trio-prev'), inner = card.querySelector('.trio-prev-inner'), fr = card.querySelector('iframe');
+  if(!fr || fr.style.display === 'none' || !box.clientWidth) return;
+  const scale = box.clientWidth / 650;
+  let h = 1200;
+  try{ h = Math.max(400, fr.contentDocument.documentElement.scrollHeight); }catch(e){}
+  fr.style.height = h + 'px'; fr.style.transform = `scale(${scale})`;
+  inner.style.height = Math.round(h * scale) + 'px';
+}
+function trioFitAll(){ trio.items.forEach((_, i) => trioFit(i)); }
+window.addEventListener('resize', trioFitAll);
+
+function useTrioDesign(i){
+  const it = trio.items[i]; if(!it || !it.html) return;
+  currentHtml = it.html;
+  setBannerPreview(it.banner, it.bannerSrc === 'ai-1' ? 'ai-1' : 'built-in', `Banner from design ${i + 1} (${trio.plans[i].archName}).`);
+  currentHtml = markHeroImage(currentHtml);
+  renderOutput();
+  ['resetLink', 'shuffleLink', 'refineLink'].forEach(id => { const b = document.getElementById(id); if(b) b.style.display = 'block'; });
+  closeTrio();
+  showStep(4);
+  showStatus(`Design ${i + 1} (${trio.plans[i].archName}) loaded — refine it, save it to the gallery, or reopen “View generated designs” (next to HTML Code) to compare.`, 'ok');
+  showToast('Design ' + (i + 1) + ' loaded');
+}
+function trioCopy(i){
+  const it = trio.items[i]; if(!it || !it.html) return;
+  navigator.clipboard.writeText(it.html).then(() => showToast('Design ' + (i + 1) + ' HTML copied'))
+    .catch(() => { codeBox.value = it.html; codeBox.select(); document.execCommand('copy'); showToast('HTML copied'); });
+}
+function trioDownload(i){
+  const it = trio.items[i]; if(!it || !it.html) return;
+  const url = URL.createObjectURL(new Blob([it.html], { type:'text/html' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `mailer-design-${i + 1}-${trio.plans[i].archName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ---------- Four-step presentation layer ---------- */
+let currentStep = 1;
+function updateStepNav(step){
+  for(let i=1;i<=4;i++){
+    const nav=document.getElementById('stepNav'+i); if(!nav) continue;
+    nav.classList.toggle('active', i===step);
+    nav.classList.toggle('done', i<step);
+    nav.classList.toggle('next', i===step+1 && i<=3);
+  }
+}
+function refreshReview(){
+  const raw=(document.getElementById('rawText')?.value || '').trim();
+  const instr=(document.getElementById('instructionField')?.value || '').trim();
+  const mode=bannerMode==='image' ? 'Image-based Banner' : 'Text-based Hero';
+  const imageReady=bannerDataUri ? 'Banner image ready' : (mode==='text' ? 'No image banner' : 'Image will be generated/uploaded');
+  const logos=[logoLeftDataUri?'Left logo':'',logoRightDataUri?'Right logo':''].filter(Boolean).join(' + ');
+  const set=(id,val)=>{const el=document.getElementById(id); if(el) el.textContent=val;};
+  set('reviewContentPreview', raw ? raw.slice(0,260)+(raw.length>260?'…':'') : '—');
+  set('reviewHeroPreview', mode + ' — ' + imageReady);
+  set('reviewLogoPreview', logos || 'No top logos selected');
+  set('reviewInstructionsPreview', instr || 'Default visual direction');
+  const brandUrl = getBrandWebsiteUrl(raw, instr);
+  set('reviewBrandPalettePreview', brandUrl ? brandUrl : 'Automatic palette');
+}
+/* Clickable stepper: go back to any finished step, or forward one step (uses the same checks as the Continue buttons). */
+(function(){
+  for(let i=1;i<=4;i++){
+    const n=document.getElementById('stepNav'+i); if(!n) continue;
+    n.setAttribute('role','button'); n.setAttribute('tabindex','0');
+    const go=()=>{
+      if(document.querySelector('.app-shell')?.classList.contains('loading-active')) return;
+      if(i<currentStep) showStep(i);
+      else if(i===currentStep+1 && i===2) goToBannerStep();
+      else if(i===currentStep+1 && i===3) goToReviewStep();
+      else if(i===4 && currentHtml) showStep(4);
+    };
+    n.addEventListener('click',go);
+    n.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  }
+})();
+const S4_MOVES = [['inputWrap','s4SlotText'],['brandSiteCard','s4SlotBrandSite'],['logosCard','s4SlotLogos'],['bannerToolsCard','s4SlotBanner'],['instructionsCard','s4SlotInstr']];
+const S4_HOMES = {};
+document.getElementById('brandWebsiteUrl')?.addEventListener('input', () => {
+  updateBrandSiteStatus('Website colours will be checked when you generate the emailer.');
+  if(typeof refreshReview === 'function') refreshReview();
+});
+document.getElementById('rawText')?.addEventListener('input', () => {
+  if(!document.getElementById('brandWebsiteUrl')?.value.trim()) {
+    const url = getBrandWebsiteUrl();
+    if(url) updateBrandSiteStatus(`Detected website: ${new URL(url).hostname}. Its colours will be sampled during generation.`);
+  }
+});
+function moveControlsForStep(toFinal){
+  S4_MOVES.forEach(([id, slotId]) => {
+    const el = document.getElementById(id), slot = document.getElementById(slotId);
+    if(!el || !slot) return;
+    if(toFinal){
+      if(!S4_HOMES[id]) S4_HOMES[id] = { parent: el.parentNode, next: el.nextSibling };
+      slot.appendChild(el);
+    }else if(S4_HOMES[id]){
+      const h = S4_HOMES[id];
+      h.parent.insertBefore(el, h.next && h.next.parentNode === h.parent ? h.next : null);
+      delete S4_HOMES[id];
+    }
+  });
+}
+function showStep(step){
+  currentStep=Math.max(1,Math.min(4,step));
+  document.querySelectorAll('.wizard-card').forEach(card=>card.classList.remove('active'));
+  const loading=document.getElementById('loadingScreen'); if(loading) loading.classList.remove('active');
+  const target=document.getElementById('step'+currentStep); if(target) target.classList.add('active');
+  updateStepNav(currentStep);
+  const shell=document.querySelector('.app-shell');
+  shell?.classList.remove('loading-active');
+  shell?.classList.toggle('ws-active', currentStep===4);
+  if(typeof syncSidebarHeight === 'function') syncSidebarHeight();
+  if(currentStep===3) refreshReview();
+  moveControlsForStep(currentStep===4);
+  if(currentStep===4 && currentHtml) renderOutput();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function goToBannerStep(){
+  const raw=document.getElementById('rawText').value.trim();
+  if(!raw){ showStatus('Paste some text first.', 'error'); return; }
+  showStep(2);
+}
+function goToReviewStep(){
+  const raw=document.getElementById('rawText').value.trim();
+  if(!raw){ showStatus('Paste some text first.', 'error'); showStep(1); return; }
+  refreshReview();
+  showStep(3);
+}
+async function runStartupChecks(){
+  const key=getApiKey();
+  if(key){
+    setStartupCheck('ai2StartupCheck','ready','Ai-2 key: ready');
+  }else{
+    setStartupCheck('ai2StartupCheck','warn','Ai-2 key: not set — add it in Settings');
+  }
+
+  setStartupCheck('ai1StartupCheck','','Ai-1 session: checking…');
+  try{
+    const resp=await fetch(CHATGPT_BRIDGE + '/api/startup-check', {cache:'no-store'});
+    const data=await resp.json().catch(()=>({}));
+    if(!resp.ok || !data.ok){
+      setStartupCheck('ai1StartupCheck','warn','Ai-1 session: bridge needs attention');
+      return;
+    }
+    if(data.loggedIn){
+      setStartupCheck('ai1StartupCheck','ready','Ai-1 session: ready');
+    }else{
+      setStartupCheck('ai1StartupCheck','warn','Ai-1 session: sign-in required once');
+    }
+  }catch(err){
+    setStartupCheck('ai1StartupCheck','warn','Ai-1 session: bridge not reachable yet');
+  }
+}
+
+function updateLoaderProgress(){
+  const started=window.__loaderStartedAt || Date.now();
+  const elapsed=Date.now()-started;
+  const pct=Math.min(100, Math.round((elapsed/5600)*100));
+  const el=document.getElementById('loaderPercent'); if(el) el.textContent=pct+'%';
+  if(pct<100) requestAnimationFrame(updateLoaderProgress);
+}
+window.__loaderStartedAt=Date.now();
+const __shell=document.querySelector('.app-shell');
+__shell?.classList.add('loading-active');
+updateLoaderProgress();
+runStartupChecks();
+setTimeout(()=>{ showStep(1); }, 5600);
+selectBannerMode('image');
+
+
+/* ---------- Page scroll support for the Mailer step ---------- */
+function fitPreviewFrame(){
+  const f = document.getElementById('previewFrame');
+  if(!f || f.style.display === 'none') return;
+  try{
+    const d = f.contentDocument; if(!d || !d.documentElement) return;
+    f.style.height = '120px';                                   // shrink first so scrollHeight reports the content height
+    const h = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0);
+    f.style.height = Math.max(h, 480) + 'px';
+  }catch(e){ f.style.height = ''; }
+}
+function syncSidebarHeight(){
+  const bar = document.querySelector('.topbar'); if(!bar) return;
+  const gap = Math.max(0, bar.offsetHeight - Math.min(window.scrollY, bar.offsetHeight));
+  document.documentElement.style.setProperty('--side-h', (window.innerHeight - gap) + 'px');
+}
+(function(){
+  const f = document.getElementById('previewFrame');
+  if(f){
+    f.addEventListener('load', () => {
+      fitPreviewFrame();
+      try{ const d = f.contentDocument; if(d && d.body && window.ResizeObserver){ new ResizeObserver(() => fitPreviewFrame()).observe(d.body); } }catch(e){}
+    });
+  }
+  ['btnDesktop','btnMobile','btnCode','editTextBtn','saveEditBtn'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.addEventListener('click', () => setTimeout(fitPreviewFrame, 80));
+  });
+  window.addEventListener('scroll', syncSidebarHeight, { passive:true });
+  const bar = document.querySelector('.topbar');
+  if(bar && window.ResizeObserver) new ResizeObserver(syncSidebarHeight).observe(bar);   // header appears after the loading screen
+  window.addEventListener('resize', () => { syncSidebarHeight(); fitPreviewFrame(); });
+  syncSidebarHeight();
+})();
+
+/* Edit Text button: icon-only, swaps pencil <-> close while edit mode is on */
+const EDIT_ICON_SVG = '<svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const EXIT_ICON_SVG = '<svg class="tb-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+function setEditBtnState(on){
+  const b = document.getElementById('editTextBtn'); if(!b) return;
+  const label = on ? 'Exit edit mode' : 'Edit text';
+  b.innerHTML = on ? EXIT_ICON_SVG : EDIT_ICON_SVG;
+  b.classList.toggle('on', !!on);
+  b.title = label; b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+</script>
+</body>
+</html>

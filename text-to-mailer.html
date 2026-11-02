@@ -277,6 +277,11 @@
   .brand-site-card input[type=url]{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink);font:inherit;font-size:13px}
   .brand-site-card input[type=url]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(106,70,218,.09)}
   .brand-site-status{min-height:0;margin-top:4px}
+  .brand-site-capture{display:none;align-items:center;gap:10px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+  .brand-site-capture img{display:block;width:110px;height:68px;object-fit:cover;object-position:top;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .brand-site-capture a{flex:none;display:block;border-radius:8px}
+  .brand-site-capture-copy{font-size:11.5px;line-height:1.45;color:var(--muted)}
+  .brand-site-capture-copy strong{display:block;color:var(--ink);font-size:12px;margin-bottom:2px}
   .multi-gen-card{margin-top:14px;padding:13px 15px;border:1px solid #e7dcf4;border-radius:14px;background:linear-gradient(135deg,#fcfaff,#fff9fd)}
   .multi-gen-toggle{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
   .multi-gen-toggle input{width:16px;height:16px;margin-top:3px;accent-color:var(--primary);flex:none}
@@ -693,8 +698,12 @@ Know More</textarea>
         <div class="options-card brand-site-card" id="brandSiteCard">
           <div class="field-label">Brand website for colours <small>optional</small></div>
           <input id="brandWebsiteUrl" type="url" placeholder="https://adamasuniversity.ac.in/" aria-describedby="brandSiteHint">
-          <div id="brandSiteHint" class="hint">The tool can extract the site's main brand colours automatically. A URL included in your content or instructions is also detected.</div>
+          <div id="brandSiteHint" class="hint">The tool opens the website in Edge, captures a screenshot and samples the visible brand colours. If screenshot capture fails, it tries the site's CSS. A URL in your content or instructions is also detected.</div>
           <div id="brandSiteStatus" class="hint brand-site-status" aria-live="polite"></div>
+          <div id="brandSiteCapture" class="brand-site-capture">
+            <a id="brandSiteScreenshotLink" href="#" target="_blank" rel="noopener noreferrer" title="Open captured website screenshot"><img id="brandSiteScreenshotPreview" alt="Website screenshot sampled for brand colours"></a>
+            <div class="brand-site-capture-copy"><strong id="brandSiteCaptureTitle">Colours sampled from screenshot</strong><span id="brandSiteCaptureDetail">The visible website colours are used for the mailer palette.</span></div>
+          </div>
         </div>
         </div>
         <aside class="s1-side">
@@ -827,7 +836,7 @@ Know More</textarea>
             
             </div>
             <div class="design-actions">
-            <button class="ghost-btn" id="shuffleLink" style="display:none" onclick="differentDesign()">&raquo; Try different</button>
+            <button class="ghost-btn" id="shuffleLink" style="display:none" title="Generate a new banner and a fresh email layout, with a different art direction." aria-label="Try a different design" onclick="differentDesign()">&raquo; Try different</button>
             <button class="ghost-btn" id="resetLink" style="display:none" onclick="startOver()">&otimes; Start over</button>
             </div>
             <div class="status" id="finalLeftStatus"></div>
@@ -1206,8 +1215,44 @@ async function callGeminiDirect(prompt){
   throw lastErr || new Error('Ai-2 is currently unavailable. Please try again in a moment.');
 }
 
+/* ---------- Paste/output cleanup: suppress visible Microsoft Office XML artefacts ---------- */
+function stripOfficeXmlArtifacts(value){
+  let out = String(value ?? '');
+  // Office settings are metadata, not email copy. Remove complete raw or escaped XML blocks.
+  out = out.replace(/<xml\b[^>]*>[\s\S]*?<\/xml\s*>/gi, ' ');
+  out = out.replace(/&lt;xml\b[\s\S]*?&lt;\/xml\s*&gt;/gi, ' ');
+  out = out.replace(/<o:officedocumentsettings\b[^>]*>[\s\S]*?<\/o:officedocumentsettings\s*>/gi, ' ');
+  out = out.replace(/&lt;o:officedocumentsettings\b[\s\S]*?&lt;\/o:officedocumentsettings\s*&gt;/gi, ' ');
+  out = out.replace(/<o:pixelsperinch\b[^>]*>[\s\S]*?<\/o:pixelsperinch\s*>/gi, ' ');
+  out = out.replace(/&lt;o:pixelsperinch\b[^&]*?&gt;[\s\S]*?&lt;\/o:pixelsperinch\s*&gt;/gi, ' ');
+  // Also remove stray Office child tags if an incomplete snippet was pasted/generated.
+  out = out.replace(/<\/?o:(?:allowpng|pixelsperinch)\b[^>]*>/gi, ' ');
+  out = out.replace(/&lt;\/?o:(?:allowpng|pixelsperinch)\b[^&]*?&gt;/gi, ' ');
+  return out;
+}
+function sanitizePastedContent(value){
+  return stripOfficeXmlArtifacts(value)
+    .replace(/\u0000/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+function readSanitizedRawText(){
+  const el = document.getElementById('rawText');
+  const original = String(el?.value || '');
+  const cleaned = sanitizePastedContent(original);
+  const officeJunk = /<\s*xml\b|&lt;\s*xml\b|<\s*o:(?:officedocumentsettings|allowpng|pixelsperinch)\b|&lt;\s*o:(?:officedocumentsettings|allowpng|pixelsperinch)\b/i.test(original);
+  if(el && officeJunk && cleaned !== original.trim()){
+    el.value = cleaned;
+    showToast('Removed Microsoft Office formatting metadata from pasted content.');
+  }
+  return cleaned;
+}
+
 /* ---------- {Label} | Content tag parsing (single-line, and multi-line {Label}...{/Label} blocks) ---------- */
 function parseTaggedLines(raw){
+  raw = sanitizePastedContent(raw);
   const lines = raw.split(/\n/);
   const roleHints = [];
   const imageTags = [];
@@ -1417,7 +1462,7 @@ function normalizeBrandUrl(value){
 function getBrandWebsiteUrl(rawOverride, instructionsOverride){
   const explicit = normalizeBrandUrl(document.getElementById('brandWebsiteUrl')?.value || '');
   if(explicit) return explicit;
-  const raw = rawOverride ?? document.getElementById('rawText')?.value ?? '';
+  const raw = sanitizePastedContent(rawOverride ?? document.getElementById('rawText')?.value ?? '');
   const instr = instructionsOverride ?? document.getElementById('instructionField')?.value ?? '';
   const corpus = `${raw}\n${instr}`;
   const matches = corpus.match(/(?:https?:\/\/|www\.)[^\s<>{}"'`\])]+/ig) || [];
@@ -1437,14 +1482,36 @@ function updateBrandSiteStatus(message, state=''){
   el.textContent = message || '';
   el.style.color = state === 'error' ? 'var(--danger)' : state === 'ok' ? 'var(--success)' : 'var(--muted)';
 }
+function updateBrandSiteCapture(palette){
+  const wrap=document.getElementById('brandSiteCapture');
+  const img=document.getElementById('brandSiteScreenshotPreview');
+  const link=document.getElementById('brandSiteScreenshotLink');
+  const heading=document.getElementById('brandSiteCaptureTitle');
+  const detail=document.getElementById('brandSiteCaptureDetail');
+  if(!wrap || !img || !link) return;
+  if(palette?.screenshotUrl){
+    const u=new URL(palette.screenshotUrl, CHATGPT_BRIDGE).href;
+    img.src=u; link.href=u; wrap.style.display='flex';
+    if(heading) heading.textContent=palette.method==='screenshot'?'Colours sampled from website screenshot':'CSS palette used (screenshot unavailable)';
+    if(detail) detail.textContent=palette.method==='screenshot'?'Open screenshot to inspect the exact visible page used for colour sampling.':'Screenshot capture was unavailable; the tool used stylesheet colours instead.';
+  }else{
+    wrap.style.display='none'; img.removeAttribute('src'); link.removeAttribute('href');
+  }
+}
 async function fetchWebsitePalette(url){
   const normalized = normalizeBrandUrl(url);
   if(!normalized) return null;
   if(brandPaletteMemo.has(normalized)) return brandPaletteMemo.get(normalized);
-  const response = await fetch(CHATGPT_BRIDGE + '/api/site-palette', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({url:normalized}), signal:AbortSignal.timeout(25000)
-  });
+  let response;
+  try{
+    response = await fetch(CHATGPT_BRIDGE + '/api/site-palette', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:normalized}), signal:AbortSignal.timeout(90000)
+    });
+  }catch(err){
+    const detail = err?.name === 'TimeoutError' || err?.name === 'AbortError' ? 'The screenshot request timed out.' : 'The local bridge could not be reached.';
+    throw new Error(`${detail} Keep start-chatgpt-bridge.bat running and open the tool at http://127.0.0.1:3210/. Original detail: ${err.message || 'Failed to fetch'}`);
+  }
   const payload = await response.json().catch(()=>({}));
   if(!response.ok || !payload.ok) throw new Error(payload.message || `Website palette extraction failed (HTTP ${response.status})`);
   if(!Array.isArray(payload.colors) || !payload.colors.length) throw new Error('No brand colours could be extracted from this website.');
@@ -1453,19 +1520,23 @@ async function fetchWebsitePalette(url){
 }
 async function resolveBrandPalette(rawOverride, instructionsOverride, quiet=false){
   const url = getBrandWebsiteUrl(rawOverride, instructionsOverride);
-  if(!url){ activeBrandPalette = null; activeBrandPaletteUrl = ''; updateBrandSiteStatus('No website URL detected — the tool will choose a design palette.'); return null; }
+  if(!url){ activeBrandPalette = null; activeBrandPaletteUrl = ''; updateBrandSiteCapture(null); updateBrandSiteStatus('No website URL detected — the tool will choose a design palette.'); return null; }
   if(activeBrandPalette && activeBrandPaletteUrl === url){
+    updateBrandSiteCapture(activeBrandPalette);
     updateBrandSiteStatus(`Brand colours ready: ${activeBrandPalette.colors.map(c=>c.hex).slice(0,4).join(' · ')}`, 'ok');
     return activeBrandPalette;
   }
-  updateBrandSiteStatus(`Reading brand colours from ${new URL(url).hostname}…`);
+  updateBrandSiteCapture(null);
+  updateBrandSiteStatus(`Opening ${new URL(url).hostname} in the local browser, capturing a screenshot and sampling its visible colours…`);
   try{
     const palette = await fetchWebsitePalette(url);
     activeBrandPalette = palette; activeBrandPaletteUrl = url;
-    updateBrandSiteStatus(`Brand colours detected: ${palette.colors.map(c=>c.hex).slice(0,4).join(' · ')}`, 'ok');
+    updateBrandSiteCapture(palette);
+    const methodNote = palette.method === 'screenshot' ? 'Screenshot colours' : 'Stylesheet fallback colours';
+    updateBrandSiteStatus(`${methodNote}: ${palette.colors.map(c=>c.hex).slice(0,5).join(' · ')}`, 'ok');
     return palette;
   }catch(err){
-    activeBrandPalette = null; activeBrandPaletteUrl = '';
+    activeBrandPalette = null; activeBrandPaletteUrl = ''; updateBrandSiteCapture(null);
     updateBrandSiteStatus(`Could not read site colours; using the normal design palette. ${err.message}`, 'error');
     if(!quiet) showToast('Website colours unavailable; continuing with an automatic palette.');
     return null;
@@ -1480,23 +1551,190 @@ function brandPalettePrompt(palette){
 }
 
 const BANNER_VARIATIONS = [
-  'photorealistic poster: a joyful young person in casual-smart clothes leaning on a big curved saturated RED shape, holding a relevant object, a city skyline and blue sky behind; GIANT oversized heavy white typography on the red curve; energetic social-media-poster feel',
-  'bright, airy, almost white/pale-blue scene: soft campus or office glass buildings blurred in the background, a faint globe/world-map watermark, one smiling person centred; headline in a two-tone navy + cyan heavy sans; very clean and modern',
-  'flat vector illustration with thin black outlines: two friendly characters interacting with a big monitor/dashboard, floating sparkles, lavender-purple + mint palette on a white background, lots of clean space for the headline',
-  'sunny outdoor photo of a person in a graduation gown or smart outfit pointing down toward a solid royal-blue panel that holds a huge white headline and a small pill subtitle chip; building and blue sky behind',
-  'corporate flyer style: a smiling cut-out professional on the right, off-white left half with an extra-bold + light two-weight headline, a slim vertical orange accent bar, tidy and trustworthy',
-  'dark luxury look: deep black/navy background with warm gold light streaks, a dramatically spot-lit subject, elegant serif headline with thin gold rules, premium and calm',
-  'purely typographic poster with NO people: enormous condensed heavy letters filling the frame, two bold colours, geometric shapes and thick lines, high contrast',
-  '3D clay/isometric render: floating rounded icons (books, cap, globe, chat bubbles, trophy) on a smooth vivid gradient background, soft shadows, playful yet polished, headline in a chunky rounded font',
-  'duotone photo cut-out of a person with a vivid magenta-to-orange gradient overlay, sticker-like circles and stars, tilted label chips, bold energetic youth-culture feel',
-  'paper-cut collage with hand-drawn doodles: cream paper texture, bright flat colour shapes, arrows and underlines, a cut-out photo of a person, playful and human',
-  'Swiss-style minimal grid: huge whitespace, one strong accent colour, a small circular photo, tiny uppercase labels, big left-aligned headline, sophisticated and quiet',
-  'abstract mesh-gradient tech look: glowing blue/purple/teal gradients with frosted-glass cards floating over them, subtle grid lines, futuristic yet friendly, crisp white headline',
-  'warm editorial photography: a candid natural-light photo in muted earth tones (terracotta, sage, sand), elegant serif headline overlaid on a calm area, magazine-cover feel',
-  'diagonal split-screen: one half a vivid full-colour photo of a person, the other half a solid bold colour with the headline, separated by a sharp angled edge, confident and dynamic'
+  'Admissions hero, premium education campaign: deep teal architectural colour block, confident student cut-out on the right, very large white headline on the left, small mustard accent bar, crisp grid and realistic studio-lit photography; no extra copy.',
+  'Deadline reminder banner: warm ivory paper texture, large sculptural calendar/date motif at the right, strong crimson date typography, one compact amber action-colour strip, subtle peach linework, clean high contrast; no extra copy.',
+  'Ranking and achievement campaign: sophisticated leaf-green field, faint map contour pattern, elegant campus/building or trophy emblem to the right, bold left-aligned ranking headline, thin inset border and restrained highlights; no extra copy.',
+  'Urgency announcement: oversized polished megaphone illustration at the left, layered burgundy and orange dimensional ribbons behind the exact headline, warm white background, tactile paper shadows, energetic but controlled composition; no extra copy.',
+  'Final-hours deadline: midnight navy background, premium 3D clock with a small lightning accent, large cyan and yellow typography, deep blue lighting, sharp geometric base strip, high-impact professional ad art direction; no extra copy.',
+  'Application-open campus banner: faded architectural campus photograph as a low-contrast backdrop, cut-out student in the foreground, teal panel with bold compact headline, a narrow gold accent block, clear asymmetric grid; no extra copy.',
+  'Creative-course promotion: vivid magenta campaign field, candid student/creative professional at one side with relevant desk tools, huge white typographic headline, one lime-yellow accent detail, crisp diagonal composition and realistic lighting; no extra copy.',
+  'Minimal institutional announcement: off-white backdrop with subtle academic blueprint linework, refined teal and navy typography, elegant graduation-cap or campus icon, spacious layout, premium understated finish; no extra copy.',
+  'Program-led editorial banner: 45/55 split with high-quality contextual photography on one side and a rich solid colour panel on the other, oversized headline, small fine-line geometry and a single warm accent; no extra copy.',
+  'Scholarship/value campaign: deep blue-green gradient-free colour field, one beautiful 3D medal or academic emblem, a small stack of gold geometric shapes, oversized bright headline and clean typographic rhythm; no extra copy.',
+  'Modern data/technology education banner: white-to-ice background, precise cyan network lines and a sculptural graduation cap or academic object on the right, confident navy headline on the left, turquoise accents; no extra copy.',
+  'Premium portrait-led campaign: soft blush/cream background, natural-light portrait cropped on the right, elegant serif headline paired with strong sans-serif emphasis, discreet rose accent and fine frame; no extra copy.',
+  'Bold typographic deadline poster: condensed heavy lettering in two sizes, a single oversized calendar numeral only when included in the supplied hero message, layered navy and yellow blocks, crisp editorial spacing; do not introduce new text.',
+  'Institutional campus promotion: realistic campus facade as a subtle lower-edge image, clean blue/teal upper field, bold white headline, architectural line motif and one saffron accent bar; professional agency-quality artwork; no extra copy.'
 ];
+
+const EMAIL_LAYOUT_DIRECTIONS = [
+  'Image-first campaign: narrow logo header, full-width hero, a strong headline band, then a compact three-column facts strip and a single full-width CTA band if the source includes a CTA.',
+  'Asymmetric editorial split: headline and intro in a left-aligned text block, hero imagery on the opposing side using an email-safe table split, then an unboxed details list with thin dividers.',
+  'Deadline-led hierarchy: oversized deadline/date treatment near the hero, compact reminder copy, a high-contrast action strip, then concise detail rows; use urgency without inventing countdowns or facts.',
+  'Institutional proof layout: slim masthead, hero, one clear achievement/benefit statement, an evidence-led metrics strip only when the source provides metrics, then a tidy programme/details section.',
+  'Programme catalogue layout: strong campaign header, concise introduction, grouped programme rows with small simple icons, alternating pale backgrounds, and one closing action band if supported by the content.',
+  'Premium editorial layout: generous white space, sophisticated headline scale, hero image, short lead paragraph, editorial section headings and fine rules; avoid cards and pill buttons.',
+  'Colour-block campaign layout: bold hero, a solid brand-colour divider band, a two-column set of key details, then an unmistakable rectangular CTA treatment when applicable.',
+  'Feature-led layout: headline and intro, a two-by-two table-safe feature grid, one broad proof/benefit band and a compact closing action area; square corners and strong alignment.',
+  'Portrait-led layout: narrow brand header, hero image, a concise headline and lead, a split section with source-supported details, then a calm full-width CTA strip if present.',
+  'Modern infographic layout: hero, three-up key facts row if there are enough facts, numbered or icon-led list for the remaining details, high-contrast but restrained finish.',
+  'Magazine cover layout: small uppercase eyebrow, large editorial headline, full-width hero, one restrained highlight panel, stacked content separated by thin rules and a quiet action link/button.',
+  'Campaign flyer layout: strong coloured title panel, hero, alternating plain-text and soft-tint sections, a single banner-like closing CTA; avoid repeating rounded white cards.',
+  'Minimal announcement layout: crisp headline and hero, one or two concise paragraphs, thin accent rule, compact key-information block and generous breathing room.',
+  'Layered split-band layout: headline/hero zone, one horizontally coloured content band, a clean two-column information section, and a contrasting rectangular action block.'
+];
+const SECTION_ARCHITECTURES = [
+  'Use a hero, a short introduction, a compact three-column facts row, and a clearly separated details list.',
+  'Use hero, a left-aligned narrative section, alternating feature rows, and one final action strip.',
+  'Use a headline/date block, a short explanation, a deadline reminder band, then the remaining factual details.',
+  'Use hero, a single proof-point band using supplied facts, a simple programme grid, and a closing CTA if supplied.',
+  'Use an editorial lead, two grouped detail sections, thin separators, and an unboxed sign-up/action area.',
+  'Use hero, one split two-column section, a compact checklist, then a strong rectangular closing band.',
+  'Use a feature grid followed by a full-width campaign strip and compact supporting details.',
+  'Use numbered content sections with small visual markers, each separated by white space rather than rounded cards.',
+  'Use a prominent hero followed by an alternating tinted/white rhythm and a small metrics row only if data exists.',
+  'Use an oversized title area, an image, a key-information table and a minimal closing action area.',
+  'Use a slim editorial heading, a hero, a highlighted key message, and several short divider-separated rows.',
+  'Use a strong coloured panel to introduce content, then a white details area and a final brand-colour action band.'
+];
+const BANNER_MOTIFS = [
+  'sculptural calendar and small clock, for deadline energy',
+  'megaphone with layered dimensional announcement ribbons',
+  'architectural line drawing with a restrained trophy/medal emblem',
+  'student cut-out with a bold geometric colour panel',
+  'graduation cap surrounded by fine technical network lines',
+  'campus silhouette with editorial grid lines',
+  'large abstract numeral/shape integrated into the composition, never additional copy',
+  'topographic map contours and a refined academic seal-like geometric mark without fake branding',
+  'three-dimensional book or academic object with controlled studio shadows',
+  'diagonal paper layers and fine dotted texture',
+  'ribbon/flag silhouette with a hard-edged offset shadow',
+  'soft editorial portrait with a subtle architectural frame',
+  'hourglass/timer motif and one sharp electric accent',
+  'thin network lines radiating from a graduation cap or programme-related object',
+  'clean architectural grid with a bold edge-to-edge colour field',
+  'simple data-dot pattern with a single sculptural central object'
+];
+const EMAIL_GRAPHIC_MOTIFS = [
+  'thin editorial rules and small square section markers', 'bold asymmetric colour blocks with sharp corners',
+  'fine architectural linework and subtle geometric grid', 'oversized section numerals and vertical rules',
+  'quiet outlined icons and hairline dividers', 'diagonal colour bar used once as a signature element',
+  'restrained dot matrix behind one key section', 'editorial underline strokes and small caps labels',
+  'flat line icons in one consistent stroke weight', 'a full-width ribbon strip and square-corner content blocks',
+  'thin frame around the hero only, no repeated card outlines', 'one oversized decorative letter/number if the content supports it'
+];
+const EMAIL_TYPE_TREATMENTS = [
+  'heavy contemporary sans-serif headline, small uppercase eyebrow, readable neutral body',
+  'editorial serif headline paired with a clean humanist sans-serif body',
+  'condensed bold headline paired with a restrained sans-serif body and compact labels',
+  'two-weight headline with one emphasized phrase in the brand accent colour',
+  'large title with deliberate line breaks, modest letter spacing and a calm body rhythm',
+  'magazine-style serif title, neat sans-serif section headers and generous line spacing',
+  'bold left-aligned headline with short uppercase labels and high-contrast supporting text',
+  'minimal typographic system: one big headline size, one section size, one body size, clear hierarchy'
+];
+const EMAIL_CTA_TREATMENTS = [
+  'square-corner solid rectangular CTA, aligned to the content grid',
+  'wide full-width CTA band with a compact rectangular button',
+  'outlined rectangular CTA with strong border contrast',
+  'short inline text-link CTA with a simple arrow, only if source content includes a CTA',
+  'contrasting colour-block CTA area with a modest button, no pill shape',
+  'left-aligned solid rectangular CTA with comfortable padding',
+  'small centred action button under a short reminder line, only if source copy supports it',
+  'simple underlined link CTA instead of a button, only if source copy supports it'
+];
+let pendingCreativeBrief = null;
+const CREATIVE_BRIEF_HISTORY_KEY = 'ttm_creative_brief_history_v23';
+function readCreativeBriefHistory(){ try { return JSON.parse(localStorage.getItem(CREATIVE_BRIEF_HISTORY_KEY) || '[]').filter(x => x && x.summary); } catch(e){ return []; } }
+function writeCreativeBriefHistory(list){ try { localStorage.setItem(CREATIVE_BRIEF_HISTORY_KEY, JSON.stringify(list.slice(0,24))); } catch(e){} }
+function creativeFingerprint(text){ let h=2166136261; for(const ch of String(text||'')){ h ^= ch.charCodeAt(0); h = Math.imul(h,16777619); } return (h>>>0).toString(16); }
+function inferCampaignFocus(raw=''){
+  const t=String(raw).toLowerCase();
+  if(/last date|deadline|closing on|closes on|final call|last few hours|few hrs|seats are filling|limited seats|application closing|apply before|due date/.test(t)) return 'deadline/admissions urgency';
+  if(/ranked|ranking|award|best[- ]|top ranked|placement|highest package|records?/.test(t)) return 'ranking, recognition and proof';
+  if(/workshop|webinar|conference|event|register now|join us|session|masterclass/.test(t)) return 'event or workshop promotion';
+  if(/scholarship|financial aid|voucher|discount|offer|benefit/.test(t)) return 'offer or scholarship';
+  if(/mba|pgdm|b\.tech|b\.sc|programme|program|course|admission|admissions|university|college|campus/.test(t)) return 'education programme promotion';
+  return 'professional campaign announcement';
+}
+function makeUniqueCreativeBrief(raw='', brandPalette=null){
+  const history=readCreativeBriefHistory();
+  const pick=(key, pool, depth=5)=>{
+    const seen=new Set(history.slice(0,depth).map(x=>x[key]).filter(Boolean));
+    let candidates=pool.filter(v=>!seen.has(v));
+    if(!candidates.length) candidates=pool;
+    return candidates[Math.floor(Math.random()*candidates.length)];
+  };
+  let brief, attempts=0;
+  do{
+    const focus=inferCampaignFocus(raw);
+    const layout=pick('layout',EMAIL_LAYOUT_DIRECTIONS,5);
+    const sections=pick('sections',SECTION_ARCHITECTURES,5);
+    const bannerDirection=pick('bannerDirection',BANNER_VARIATIONS,5);
+    const motif=pick('motif',BANNER_MOTIFS,5);
+    const emailMotif=pick('emailMotif',EMAIL_GRAPHIC_MOTIFS,5);
+    const typography=pick('typography',EMAIL_TYPE_TREATMENTS,4);
+    const cta=pick('cta',EMAIL_CTA_TREATMENTS,4);
+    const imageComposition=pick('imageComposition',[
+      'subject/academic object on the right, headline zone on the left',
+      'headline in the upper-left with the key visual anchored at the lower-right',
+      'balanced centre composition with headline in a clean upper band',
+      'strong diagonal split with a visual panel on one side and a typography panel on the other',
+      'asymmetric editorial composition with ample negative space around the headline',
+      'top-aligned headline with a small object near the lower edge and clean horizon',
+      'large cropped focal object at the left with clear type space to the right',
+      'wide architectural/campus scene along the lower third, headline high on the opposite side',
+      'single bold emblem on one third, typography taking the remaining two thirds',
+      'layered but controlled composition with one focal cut-out and one flat color field'
+    ],4);
+    const finish=pick('finish',[
+      'photorealistic editorial campaign art with natural controlled lighting',
+      'high-end 3D product-style render with realistic shadows, no plastic-looking clutter',
+      'vector-meets-photography art direction with clean geometry',
+      'paper collage with crisp cut-outs and subtle dimensional shadow',
+      'minimal architectural illustration with premium print-ad discipline',
+      'bold typographic poster with precise grid and limited decoration',
+      'soft editorial portrait photography with a crisp graphic frame',
+      'premium institutional infographic with restrained icons and impeccable alignment'
+    ],4);
+    const colourPlacement=pick('colourPlacement',[
+      'put the strongest colour in one large block and keep the rest mostly neutral',
+      'use a two-tone split, with accent colour limited to a short bar and headline emphasis',
+      'keep the background light and use colour for typography, one object and the CTA area',
+      'use a dark rich field with one luminous accent and clearly separated text space',
+      'use a pale institutional background with one deep brand-colour panel and a warm highlight',
+      'use a saturated hero field with white space/negative space protecting readability',
+      'use a restrained monochrome foundation with one bright action colour'
+    ],4);
+    const seed=(Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)).toUpperCase();
+    const summary=`${focus} | email: ${layout} | sections: ${sections} | banner: ${bannerDirection} | focal: ${imageComposition} | motif: ${motif} | type: ${typography} | finish: ${finish}`;
+    brief={seed, focus, layout, sections, bannerDirection, motif, emailMotif, typography, cta, imageComposition, finish, colourPlacement, summary,
+      avoidSummaries:history.slice(0,5).map(x=>x.summary), contentKey:creativeFingerprint(String(raw).trim())};
+    attempts++;
+  }while(history.some(x=>x.summary===brief.summary) && attempts<40);
+  history.unshift({seed:brief.seed,summary:brief.summary,layout:brief.layout,sections:brief.sections,bannerDirection:brief.bannerDirection,motif:brief.motif,emailMotif:brief.emailMotif,typography:brief.typography,cta:brief.cta,imageComposition:brief.imageComposition,finish:brief.finish,colourPlacement:brief.colourPlacement});
+  writeCreativeBriefHistory(history);
+  return brief;
+}
+function creativeAvoidanceText(brief){
+  const recent=(brief?.avoidSummaries||[]).slice(0,4);
+  return recent.length ? `\nRECENT DESIGN DIRECTIONS TO AVOID REPEATING:\n${recent.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n` : '';
+}
+function emailCreativeDirective(brief, brandPalette){
+  if(!brief) return '';
+  const paletteRule=brandPalette
+    ? `Use the detected website brand palette as the colour source. Do not replace its hues; vary the area coverage, contrast and placement of those colours instead.`
+    : `Follow the current palette direction, with this colour placement rule: ${brief.colourPlacement}.`;
+  return `\n\nFRESH CREATIVE BRIEF — RUN ${brief.seed} (treat as a new art direction, not another skin on the previous template):\n- Campaign focus: ${brief.focus}.\n- Core layout: ${brief.layout}\n- Content architecture: ${brief.sections}\n- Typography system: ${brief.typography}\n- Graphic signature: ${brief.emailMotif}\n- Existing CTA treatment if the source contains a CTA: ${brief.cta}\n- Colour placement: ${paletteRule}\n- This fresh brief OVERRIDES any conflicting generic archetype above. Make the structure recognizably different: change section order, proportions, alignment, whitespace rhythm, headline treatment and the relationship of image to copy. Avoid the familiar repeated stack of rounded white cards, generic pill buttons, gradient-only hero or dashboard UI. Use tables/inline styles compatible with email clients and adapt components only to content that actually exists.\n- Do not invent copy, metrics, benefits, dates, links, logos or CTAs. This brief controls visual design only.\n${creativeAvoidanceText(brief)}`;
+}
+function bannerCreativeDirective(brief, brandPalette){
+  if(!brief) return '';
+  const colors=brandPalette?.colors?.map(c=>c.hex).slice(0,5).join(', ');
+  const recent=(brief.avoidSummaries||[]).slice(0,3).map((x,i)=>`${i+1}. ${x}`).join('\n');
+  return `\nCAMPAIGN ART DIRECTION (${brief.seed}): ${brief.bannerDirection}\nFOCAL COMPOSITION: ${brief.imageComposition}.\nVISUAL MOTIF: ${brief.motif}.\nFINISH: ${brief.finish}.\nCOLOUR PLACEMENT: ${colors ? `Use official website colours ${colors}; vary their placement without changing the brand identity.` : brief.colourPlacement}\nCAMPAIGN TYPE: ${brief.focus}. Use visual cues relevant to this campaign type (for example calendar/clock for deadlines, megaphone/ribbons for urgency, restrained award/building motif for rankings, or a student/campus visual for programme promotion). Do not force an irrelevant motif.\nAESTHETIC STANDARD: polished agency-made education/marketing campaign banner like a real institutional advertisement: strong grid, one visual focal point, crisp typography, disciplined 2–3 colour hierarchy, realistic lighting or refined illustration, deliberate negative space, clean edges and strong contrast. This must be a new composition, not merely a recolour of a stock layout.\n${recent ? `RECENT DIRECTIONS TO AVOID:\n${recent}\n` : ''}`;
+}
 function randomBannerVariation(){
-  return BANNER_VARIATIONS[bagDraw('banner', BANNER_VARIATIONS.length)];
+  return pendingCreativeBrief?.bannerDirection || BANNER_VARIATIONS[bagDraw('banner', BANNER_VARIATIONS.length)];
 }
 
 async function persistOptimizedBanner(dataUri, originalFilename){
@@ -1516,15 +1754,19 @@ async function persistOptimizedBanner(dataUri, originalFilename){
   }
 }
 
-async function generateChatGPTBanner(){
-  const raw = document.getElementById('rawText').value.trim();
-  if(!raw){ showStatus('Paste your email content first.', 'error'); return; }
-  if(chatGPTGenerationBusy) return;
+async function generateChatGPTBanner(options={}){
+  const raw = readSanitizedRawText();
+  if(!raw){ showStatus('Paste your email content first.', 'error'); return false; }
+  if(chatGPTGenerationBusy) return false;
 
+  if(!options.usePendingBrief || !pendingCreativeBrief || pendingCreativeBrief.contentKey !== creativeFingerprint(String(raw).trim())){
+    pendingCreativeBrief = makeUniqueCreativeBrief(raw);
+  }
+  const creativeBrief = pendingCreativeBrief;
   const btn = document.getElementById('chatgptBannerBtn');
   const parsed = parseTaggedLines(raw);
   const bannerText = getBannerText(raw, parsed);
-  const variation = randomBannerVariation();
+  const variation = creativeBrief?.bannerDirection || randomBannerVariation();
   const explicit = parsed.imageTags && parsed.imageTags.length ? parsed.imageTags[0].content.trim() : '';
 
   chatGPTGenerationBusy = true;
@@ -1538,7 +1780,7 @@ async function generateChatGPTBanner(){
   try{
     const palette = await resolveBrandPalette(raw, document.getElementById('instructionField')?.value || '', true);
     const paletteInstruction = palette ? `\n\nBRAND COLOURS FROM ${palette.domain || palette.url}: Use these colours consistently: ${palette.colors.map(c=>c.hex).slice(0,5).join(', ')}. The first colour is the primary brand colour. Keep the banner consistent with this website identity; do not invent a different palette.` : '';
-    const prompt = `Create ONE premium marketing-email hero/banner image for this campaign.\n\nEXACT HERO/BANNER MESSAGE:\n${explicit || bannerText}\n\nVISUAL DIRECTION:\n${variation}\n\nREQUIREMENTS:\n- Landscape email hero, target maximum width 650 pixels. The final image will be optimized client-side to stay under 1 MB while preserving visual quality.\n- The exact supplied hero/banner message is the only marketing copy allowed in the image. Do not add any other copy.\n- If the supplied text is too long, keep every word but use clean line breaks and fit it comfortably inside safe margins.\n- Make the composition visually distinctive from previous generations.\n- Strong focal visual, polished professional education/business aesthetic.\n- Do not invent dates, logos, statistics, prices, claims, brands, or extra promotional copy.\n- Do not use fake logos.\n- Keep the primary text highly legible on desktop and mobile crop.\n- No mock email frame, no browser UI, no watermark.${paletteInstruction}\n- Return the finished image only.`;
+    const prompt = `Create ONE exceptionally polished professional marketing-campaign banner image. This is a finished LANDSCAPE AD BANNER, not a full email, not a website screenshot and not a collage of multiple concepts.\n\nEXACT HERO/BANNER MESSAGE (the only readable text allowed):\n${explicit || bannerText}\n\nPRIMARY VISUAL DIRECTION:\n${variation}\n${bannerCreativeDirective(creativeBrief, palette)}\nREQUIREMENTS:\n- Compose for a wide email hero, roughly 2.4:1 landscape. Final output is optimized to max 650px wide and under 1 MB. Keep the headline within safe margins.\n- Render the exact supplied message only. No additional headings, captions, CTA labels, dates, statistics, logos, badges containing text, or tiny pseudo-text. If the hero message includes a date, that exact date may be emphasized but never changed.\n- Use one strong focal object/person/illustration relevant to the campaign, one clear headline area and a disciplined grid. The overall result should resemble a professional education-marketing agency banner, like a thoughtfully art-directed admissions deadline, ranking/achievement, programme promotion or urgency creative.\n- Keep contrast high and all words crisp and correctly spelled. Avoid warped lettering, clutter, generic gradients without a focal concept, generic stock-banner templates, excessive floating icons, and random decorative text.\n- Do not invent institutional logos, brand names or unsupported claims. Do not use fake logos.\n- No email mock-up, browser UI, collage sheet, watermark, border preview or multiple banner options. Return one single finished image only.${paletteInstruction}`;
     const response = await fetch(CHATGPT_BRIDGE + '/api/chatgpt-banner', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -1569,6 +1811,7 @@ async function generateChatGPTBanner(){
       refreshReview();
       showStatus('Banner ready — check the preview, then continue to Review.', 'ok');
     }
+    return true;
   }catch(err){
     const message = String(err && err.message || err);
     if(/Failed to fetch|NetworkError|fetch/i.test(message)){
@@ -1579,6 +1822,7 @@ async function generateChatGPTBanner(){
       showStatus(message, 'error');
     }
     logGenIssue('Ai-1 image generation failed:\n' + message);
+    return false;
   }finally{
     chatGPTGenerationBusy = false;
     btn.disabled = false;
@@ -1754,8 +1998,20 @@ function startOver(){
   if(typeof showStep === 'function') showStep(1);
 }
 
-function differentDesign(){
-  generateMailer(true);
+async function differentDesign(){
+  const raw = sanitizePastedContent(document.getElementById('rawText')?.value || '');
+  if(!raw){ showStatus('Paste some text first.', 'error'); showStep(1); return; }
+  pendingCreativeBrief = makeUniqueCreativeBrief(raw);
+  // In image mode, a new visual is part of a new design; do not silently reuse the previous banner.
+  if(bannerMode === 'image'){
+    const generated = await generateChatGPTBanner({usePendingBrief:true});
+    if(!generated && pendingCreativeBrief){
+      showToast('The new banner could not be generated, so a fresh email layout will use the current banner.');
+      await generateMailer(true);
+    }
+    return;
+  }
+  await generateMailer(true);
 }
 
 function refineCurrent(){
@@ -1786,15 +2042,38 @@ function buildTwoLogoHeader(){
   </td></tr>
 </table>`;
 }
-function normalizeEmailFooter(html){
+function normalizeEmailFooter(html, sourceText=''){
+  // Clean model-generated Office XML before the HTML parser can render it as body content.
+  html = stripOfficeXmlArtifacts(html);
+  const sourceLower = String(sourceText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const generatedFooterSignals = [
+    'all rights reserved', 'manage preferences', 'email preferences', 'update your preferences',
+    'follow us on', 'follow us for', 'connect with us', 'best regards', 'warm regards',
+    'kind regards', 'sincerely,', 'yours sincerely', 'we look forward to hearing from you',
+    'thank you for choosing', 'you can reach us at', 'sent to you because'
+  ];
+  function isGeneratedFooterText(text){
+    const t = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if(!t || t.length > 320) return false;
+    // Remove footer-only boilerplate unless it was explicitly present in the user's input.
+    return generatedFooterSignals.some(signal => t.includes(signal) && !sourceLower.includes(signal));
+  }
   try{
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
+    // Remove malformed Office namespace elements if the generator emitted them without an <xml> wrapper.
+    Array.from(doc.querySelectorAll('*')).forEach(el => {
+      const tag = String(el.tagName || '').toLowerCase();
+      if(tag === 'xml' || tag === 'o:officedocumentsettings' || tag === 'o:allowpng' || tag === 'o:pixelsperinch') el.remove();
+    });
+    // The app owns the footer. Discard semantic/generated footers and rebuild one canonical footer below.
+    Array.from(doc.querySelectorAll('footer,tfoot,[role="contentinfo"],[class*="footer" i],[id*="footer" i],.email-footer,.email-footer-wrap')).forEach(el => el.remove());
+
     // Remove generic "view in browser" links and rows containing the old footer copy.
     Array.from(doc.querySelectorAll('tr')).forEach(tr => {
       const t = (tr.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t.includes('view in browser') || t.includes('you are receiving this email because') || t.includes('privacy policy') || t.includes('unsubscribe')){
+      if(t.includes('view in browser') || t.includes('you are receiving this email because') || t.includes('privacy policy') || t.includes('unsubscribe') || isGeneratedFooterText(t) || (/©\s*20\d{2}/i.test(t) && !sourceLower.includes('©'))){
         tr.remove();
       }
     });
@@ -1806,7 +2085,7 @@ function normalizeEmailFooter(html){
     // Remove any leftover standalone footer phrases.
     Array.from(doc.querySelectorAll('p,div,td')).forEach(el => {
       const t = (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t === 'view in browser' || t.startsWith('you are receiving this email because you subscribed')) el.remove();
+      if(t === 'view in browser' || t.startsWith('you are receiving this email because you subscribed') || isGeneratedFooterText(t) || (/^©\s*20\d{2}(?:\s|$)/i.test(t) && !sourceLower.includes('©'))) el.remove();
     });
 
     const footer = doc.createElement('div');
@@ -1821,7 +2100,7 @@ function normalizeEmailFooter(html){
     return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
   }catch(e){
     // Fallback: remove the most common old footer/view-browser wording and append the canonical footer.
-    let out = String(html || '')
+    let out = stripOfficeXmlArtifacts(String(html || ''))
       .replace(/<[^>]*>[^<]*view in browser[^<]*<\/[^>]+>/ig,'')
       .replace(/<[^>]*>[^<]*you are receiving this email because[^<]*<\/[^>]+>/ig,'')
       .replace(/<[^>]*>[^<]*privacy policy[^<]*<\/[^>]+>/ig,'');
@@ -1985,7 +2264,7 @@ function syncLogoPreviews(){
 
 /* ---------- Generate / Update Mailer with AI ---------- */
 async function generateMailer(forceNew = true){
-  const raw = document.getElementById('rawText').value.trim();
+  const raw = sanitizePastedContent(document.getElementById('rawText').value);
   if(!raw){ showStatus('Paste some text first.', 'error'); return; }
   // Banner is optional (as in V8). If "Image" is selected but nothing exists yet, ask instead of failing silently.
   if(bannerMode === 'image' && !bannerDataUri && !currentHtml){
@@ -2004,7 +2283,15 @@ async function generateMailer(forceNew = true){
   const genBtns = ['generateBtn','generateBtn4'].map(id => document.getElementById(id)).filter(Boolean);
   const btn = { set disabled(v){ genBtns.forEach(x => x.disabled = v); } };
   btn.disabled = true;
-  if(forceNew) currentHtml = null;
+  let freshCreativeBrief = null;
+  if(forceNew){
+    currentHtml = null;
+    const key = creativeFingerprint(String(raw).trim());
+    freshCreativeBrief = pendingCreativeBrief && pendingCreativeBrief.contentKey === key
+      ? pendingCreativeBrief
+      : makeUniqueCreativeBrief(raw);
+    pendingCreativeBrief = null;
+  }
 
   // Parse optional {Label} | Content tags out of the raw text — these guide the
   // AI on structure (headline vs section title etc.), and labels mentioning
@@ -2108,10 +2395,11 @@ Keep everything else about the email consistent with the current version unless 
 
 Technical requirements:
 - Table-based layout (role="presentation" tables), inline CSS only, max-width 600px, centered.
-- Include MSO conditional comments for Outlook compatibility (xmlns:v, xmlns:o, OfficeDocumentSettings).
+- Use email-client-safe tables. If MSO conditional comments are needed, place them correctly in the document head. Never output raw Office XML or visible Office namespace tags such as <xml>, <o:OfficeDocumentSettings>, <o:AllowPNG>, or <o:PixelsPerInch>.
 - Include a mobile media query (max-width:600px) that adjusts padding and headline size.
-- Include a preheader (hidden preview text), a prominent hero/banner image when a banner placeholder is supplied, headline, intro copy, a list of item/program blocks (title, short description, CTA link) if the content has multiple items, and a minimal footer. The app will inject the exact unsubscribe footer after generation. Do not add any view-in-browser link.
-- Never put a generic stock-photo URL or external image URL in the output when a banner placeholder is supplied; use the placeholder exactly.
+- Include a preheader (hidden preview text), a prominent hero/banner image when a banner placeholder is supplied, and structure the email around the supplied content. The app injects the only footer after generation; do not create any footer, unsubscribe/privacy/copyright text, social links, view-in-browser link, or sign-off.
+- STRICT CONTENT FIDELITY: Do not invent additional copy, benefits, claims, dates, statistics, offers, sign-offs, or explanations. Every visible sentence must be present in or directly supported by RAW CONTENT; headings may only be concise restatements of supplied wording. Only add a CTA if the source content explicitly asks for an action; never invent a destination URL or placeholder link.
+- Never put a generic stock-photo URL or external image URL in the output when a banner placeholder is supplied; use the placeholder exactly. Never output any raw or escaped <xml>...</xml> block or Office settings payload; Office XML is metadata, not visible email content.
 
 Visual design direction for THIS email (commit fully to this — don't fall back to a generic plain template, and do NOT default to a stack of white rounded cards with pill buttons unless the direction below explicitly says so):
 LAYOUT: ${style.archetype}
@@ -2119,10 +2407,11 @@ ${colorLine}
 TYPOGRAPHY (use these exact font-family stacks inline, with their fallbacks): ${style.fonts}
 SHAPE LANGUAGE: ${style.shape}.
 Make this email look clearly different from a typical newsletter: distinctive hero treatment, distinctive section styling, and a colour/typography feel that matches the direction above.
+${emailCreativeDirective(freshCreativeBrief, brandPalette)}
 
 User's own style/content instructions, if any (these take priority over the direction above where they conflict): "${instructions || 'None given — just follow the visual direction above.'}"${logoInstruction}${roleHintsBlock}${brandPaletteDirective}
 
-RAW CONTENT:
+RAW CONTENT (the only source of visible marketing copy; preserve its facts and do not add unrelated footer text):
 """${cleanedRaw}"""
 
 Return ONLY the complete raw HTML, starting with <!DOCTYPE html> — no markdown fences, no commentary, no explanation.`;
@@ -2143,7 +2432,7 @@ Return ONLY the complete raw HTML, starting with <!DOCTYPE html> — no markdown
       html = html.split(placeholder).join(dataUri);
     }
 
-    html = normalizeEmailFooter(html);
+    html = normalizeEmailFooter(html, cleanedRaw);
     html = injectTopLogoRow(html);
     currentHtml = markHeroImage(html);
     renderOutput();
@@ -2276,7 +2565,7 @@ const trioHexes = t => (String(t).match(/#[0-9A-Fa-f]{6}/g) || []).map(h => h.to
 const trioLum = h => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
 
 /* ---- 1. Plan 2–4 directions that are guaranteed to differ ---- */
-function planTrio(count=3, brandPalette=null){
+function planTrio(count=3, brandPalette=null, rawContent=''){
   count = Math.max(2, Math.min(4, Number(count) || 3));
   const arch = [];
   for(let k = 0; k < count; k++){
@@ -2297,6 +2586,7 @@ function planTrio(count=3, brandPalette=null){
   const siteColors = brandPalette?.colors?.map(c => String(c.hex || c).toUpperCase()).filter(c => /^#[0-9A-F]{6}$/.test(c)).slice(0,5) || [];
   return arch.map((ai, k) => {
     const a = STYLE_ARCHETYPES[ai];
+    const freshBrief = makeUniqueCreativeBrief(rawContent, brandPalette);
     const palOk = COLOR_PALETTES.map((p, i) => ((a.tone === 'any' || p.tone === a.tone) && !usedPal.includes(i)) ? i : -1).filter(i => i >= 0);
     const pi = historyDraw('palette', COLOR_PALETTES.length, 5, palOk.length ? palOk : COLOR_PALETTES.map((_, i) => i).filter(i => !usedPal.includes(i)));
     let fontOk = FONT_PAIRINGS.map((f, i) => (a.fonts.includes(f.kind) && !usedFont.includes(i)) ? i : -1).filter(i => i >= 0);
@@ -2316,16 +2606,20 @@ function planTrio(count=3, brandPalette=null){
       hexes = siteColors;
     }
     return {
-      k, archName: trioTitleCase(a.text.split(':')[0]), archText: a.text,
+      k, archName: trioTitleCase(a.text.split(':')[0]),
+      archText: `${a.text}\nAdditional fresh design architecture: ${freshBrief.layout}\nContent section sequence: ${freshBrief.sections}\nTypography and graphic signature: ${freshBrief.typography}; ${freshBrief.emailMotif}. Avoid repetitive rounded-card stacks.`,
       palette: paletteText, paletteTone: siteColors.length ? 'any' : COLOR_PALETTES[pi].tone, hexes,
-      fonts: FONT_PAIRINGS[fi].text, fontKind: FONT_PAIRINGS[fi].kind, shape: SHAPE_LANGUAGES[si],
-      bannerText: BANNER_VARIATIONS[bi], bannerLabel: TRIO_BANNER_LABELS[bi] || 'Custom banner'
+      fonts: FONT_PAIRINGS[fi].text, fontKind: FONT_PAIRINGS[fi].kind,
+      shape: `${SHAPE_LANGUAGES[si]} Additional design motif: ${freshBrief.emailMotif}.`,
+      bannerText: `${BANNER_VARIATIONS[bi]}\nAdditional campaign art direction: ${freshBrief.bannerDirection}; ${freshBrief.imageComposition}; motif: ${freshBrief.motif}; finish: ${freshBrief.finish}.`,
+      bannerLabel: freshBrief.bannerDirection.split(':')[0] || TRIO_BANNER_LABELS[bi] || 'Custom banner',
+      creativeBrief: freshBrief
     };
   });
 }
 /* ---- 2. Shared inputs (read once per run) ---- */
 function trioContext(){
-  const raw = document.getElementById('rawText').value.trim();
+  const raw = sanitizePastedContent(document.getElementById('rawText').value);
   const parsed = parseTaggedLines(raw);
   const explicit = parsed.imageTags.length ? parsed.imageTags[0].content.trim() : '';
   const heroMessage = explicit || getBannerText(raw, parsed);
@@ -2344,8 +2638,8 @@ function trioContext(){
 
 function trioBannerPrompt(i){
   const plan = trio.plans[i];
-  const others = trio.plans.filter((_, k) => k !== i).map(p => p.bannerLabel).join(' and ');
-  return `Create ONE premium marketing-email hero/banner image for this campaign.\n\nEXACT HERO/BANNER MESSAGE:\n${trio.ctx.heroMessage}\n\nVISUAL DIRECTION:\n${plan.bannerText}\n\nCOLOUR PALETTE (make these exact hex colours the dominant colours of the image): ${plan.palette}\n\nREQUIREMENTS:\n- Landscape email hero, target maximum width 650 pixels. The final image will be optimized client-side to stay under 1 MB while preserving visual quality.\n- This is banner ${i + 1} of ${trio.plans.length} for the same campaign. The other banners use these directions: ${others || 'none'}. This one must look completely different from them in composition, subject, typography and colour.\n- The exact supplied hero/banner message is the only marketing copy allowed in the image. Do not add any other copy.\n- If the supplied text is too long, keep every word but use clean line breaks and fit it comfortably inside safe margins.\n- Strong focal visual, polished professional aesthetic.\n- Do not invent dates, logos, statistics, prices, claims, brands, or extra promotional copy.\n- Do not use fake logos.\n- Keep the primary text highly legible on desktop and mobile crop.\n- No mock email frame, no browser UI, no watermark.\n- Return the finished image only.`;
+  const others = trio.plans.filter((_, k) => k !== i).map(p => p.bannerLabel).join(' | ');
+  return `Create one finished, agency-quality LANDSCAPE marketing banner for this campaign; do not create a full email or a collage.\n\nEXACT HERO MESSAGE — only readable text allowed:\n${trio.ctx.heroMessage}\n\nPRIMARY ART DIRECTION:\n${plan.bannerText}\n\nBRAND COLOUR PALETTE:\n${plan.palette}\n\nDESIGN ${i+1} OF ${trio.plans.length}. Sibling concepts already use: ${others || 'none'}. This concept must be distinct by visual idea, focal object, composition, typography placement and negative space — not merely a colour swap.\n\nPRODUCTION REQUIREMENTS:\n- Wide landscape composition (approx 2.4:1); final is optimized to max 650px wide and under 1 MB.\n- Use one main focal subject or object and one clean text zone. Create clear hierarchy, strong alignment, crisp edges and deliberate negative space.\n- Art direction should resemble the user's professional education-marketing references: admissions/deadline calendars, megaphone/ribbon urgency, campus architecture, rankings/award motifs, student-led programme promotion, or refined academic linework as relevant to the source content. Choose only a motif relevant to this campaign.\n- Use realistic lighting or refined illustration, controlled shadows and a restrained palette. Avoid generic gradients alone, random floating icons, illegible 3D text, tiny decorative pseudo-copy and overdecorated templates.\n- The exact hero message is the only text. Do not introduce added dates, button labels, slogans, benefits, logos, statistics or claims. Never use fake logos.\n- No full email mockup, browser UI, frame preview, watermark or multiple options. Return one final banner only.`;
 }
 
 /* ---- 3. Banners ---- */
@@ -2460,10 +2754,11 @@ async function trioMakeMailer(i){
 
 Technical requirements:
 - Table-based layout (role="presentation" tables), inline CSS only, max-width 600px, centered.
-- Include MSO conditional comments for Outlook compatibility (xmlns:v, xmlns:o, OfficeDocumentSettings).
+- Use email-client-safe tables. If MSO conditional comments are needed, place them correctly in the document head. Never output raw Office XML or visible Office namespace tags such as <xml>, <o:OfficeDocumentSettings>, <o:AllowPNG>, or <o:PixelsPerInch>.
 - Include a mobile media query (max-width:600px) that adjusts padding and headline size.
-- Include a preheader (hidden preview text), a prominent hero/banner image, headline, intro copy, a list of item/program blocks (title, short description, CTA link) if the content has multiple items, and a minimal footer. The app will inject the exact unsubscribe footer after generation. Do not add any view-in-browser link.
-- An image banner is ready. Insert it as <img src="BANNER_IMG_PLACEHOLDER_TOKEN" ...> prominently as the hero visual. Do not generate or invent another banner image. Never put a generic stock-photo URL or external image URL in the output.
+- Include a preheader (hidden preview text), a prominent hero/banner image, and structure the email around the supplied content. The app injects the only footer after generation; do not create any footer, unsubscribe/privacy/copyright text, social links, view-in-browser link, or sign-off.
+- STRICT CONTENT FIDELITY: Do not invent additional copy, benefits, claims, dates, statistics, offers, sign-offs, or explanations. Every visible sentence must be present in or directly supported by RAW CONTENT; headings may only be concise restatements of supplied wording. Only add a CTA if the source content explicitly asks for an action; never invent a destination URL or placeholder link.
+- An image banner is ready. Insert it as <img src="BANNER_IMG_PLACEHOLDER_TOKEN" ...> prominently as the hero visual. Do not generate or invent another banner image. Never put a generic stock-photo URL or external image URL in the output. Never output raw or escaped Office XML (<xml>...</xml>, o:OfficeDocumentSettings, o:AllowPNG, o:PixelsPerInch) anywhere.
 
 THIS IS DESIGN ${i + 1} OF ${trio.plans.length}. The other design directions are ${others || 'none'}. Yours must be structurally different from them: different section order, different relationship between hero and headline, different component shapes, different CTA style and a different visual hierarchy. Commit fully to the direction below — do NOT default to a stack of white rounded cards with pill buttons unless the direction explicitly says so.
 LAYOUT: ${plan.archText}
@@ -2471,9 +2766,17 @@ ${colorLine}
 TYPOGRAPHY (use these exact font-family stacks inline, with their fallbacks): ${plan.fonts}
 SHAPE LANGUAGE: ${plan.shape}.
 
+CREATIVE UNIQUENESS DIRECTIVE (${plan.creativeBrief?.seed || 'fresh'}):
+- Make this email look like a professionally art-directed education marketing campaign, inspired by strong hierarchy, image-led heroes, clean institutional header treatment, rectangular CTA bands, programme/benefit sections, metrics strips only when supplied facts exist, and restrained decorative motifs.
+- Use this design architecture: ${plan.creativeBrief?.layout || plan.archText}
+- Content flow: ${plan.creativeBrief?.sections || 'adapt the content to a distinct editorial sequence'}
+- Typography: ${plan.creativeBrief?.typography || plan.fonts}
+- Graphic signature: ${plan.creativeBrief?.emailMotif || plan.shape}
+- Do not default to generic stacked rounded cards or pill buttons. Each generated design should be materially different in structure, section order, alignment, image relationship and component geometry. Keep the exact content facts and add no unsupported copy.
+
 User's own style/content instructions, if any (these take priority over the direction above where they conflict): "${ctx.instructions || 'None given — just follow the visual direction above.'}"${ctx.logoInstruction}${ctx.hintsBlock}${brandPalettePrompt(ctx.brandPalette)}
 
-RAW CONTENT:
+RAW CONTENT (the only source of visible marketing copy; preserve its facts and do not add unrelated footer text):
 """${ctx.cleanedRaw}"""
 
 Return ONLY the complete raw HTML, starting with <!DOCTYPE html> — no markdown fences, no commentary, no explanation.`;
@@ -2483,7 +2786,7 @@ Return ONLY the complete raw HTML, starting with <!DOCTYPE html> — no markdown
     html = html.split('LOGO_LEFT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY').join('').split('LOGO_RIGHT_IMAGE_SRC_TOKEN_DO_NOT_MODIFY').join('');
     html = html.split('BANNER_IMG_PLACEHOLDER_TOKEN').join(it.banner);
     if(!html.includes(it.banner)) html = replaceHeroImage(html, it.banner, '__none__'); // model dropped the token: put the banner back
-    html = normalizeEmailFooter(html);
+    html = normalizeEmailFooter(html, ctx.cleanedRaw);
     html = injectTopLogoRow(html);
     html = trioMarkHero(html, it.banner);
     it.html = html; it.state = 'done'; it.msg = 'Ready';
@@ -2538,7 +2841,7 @@ async function startTrio(){
     if(trio.cancel){ showToast('Finishing the current step — try again in a moment'); return; }
     openTrio(); return;
   }
-  const raw = document.getElementById('rawText').value.trim();
+  const raw = readSanitizedRawText();
   if(!raw){ showStatus('Paste some text first.', 'error'); showStep(1); return; }
   if(!getApiKey()){ showStatus('Add your Ai-2 API key in Settings (⚙️) first.', 'error'); openSettings(); return; }
   if(chatGPTGenerationBusy){ showToast('Wait for the current Ai-1 banner to finish'); return; }
@@ -2565,7 +2868,7 @@ async function startTrio(){
       trio.ctx.brandPalette = await resolveBrandPalette(raw, trio.ctx.instructions, true);
       if(!trio.ctx.brandPalette) trio.notice = 'The brand website could not be read, so automatic palettes will be used instead.';
     }
-    trio.plans = planTrio(requestedCount, trio.ctx.brandPalette);
+    trio.plans = planTrio(requestedCount, trio.ctx.brandPalette, trio.ctx.cleanedRaw);
     trio.items = trio.plans.map(() => ({ state:'queued', msg:'Waiting…', html:null, banner:null, bannerSrc:null, err:null }));
     buildTrioCards(); renderTrio(); openTrio();
     if(sub) sub.textContent = 'Checking the Ai-1 session…';
@@ -2741,7 +3044,7 @@ function updateStepNav(step){
   }
 }
 function refreshReview(){
-  const raw=(document.getElementById('rawText')?.value || '').trim();
+  const raw=readSanitizedRawText();
   const instr=(document.getElementById('instructionField')?.value || '').trim();
   const mode=bannerMode==='image' ? 'Image-based Banner' : 'Text-based Hero';
   const imageReady=bannerDataUri ? 'Banner image ready' : (mode==='text' ? 'No image banner' : 'Image will be generated/uploaded');
@@ -2773,7 +3076,8 @@ function refreshReview(){
 const S4_MOVES = [['inputWrap','s4SlotText'],['brandSiteCard','s4SlotBrandSite'],['logosCard','s4SlotLogos'],['bannerToolsCard','s4SlotBanner'],['instructionsCard','s4SlotInstr']];
 const S4_HOMES = {};
 document.getElementById('brandWebsiteUrl')?.addEventListener('input', () => {
-  updateBrandSiteStatus('Website colours will be checked when you generate the emailer.');
+  updateBrandSiteCapture(null);
+  updateBrandSiteStatus('Website colours will be sampled from a browser screenshot when you generate the emailer.');
   if(typeof refreshReview === 'function') refreshReview();
 });
 document.getElementById('rawText')?.addEventListener('input', () => {
@@ -2812,12 +3116,12 @@ function showStep(step){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function goToBannerStep(){
-  const raw=document.getElementById('rawText').value.trim();
+  const raw=readSanitizedRawText();
   if(!raw){ showStatus('Paste some text first.', 'error'); return; }
   showStep(2);
 }
 function goToReviewStep(){
-  const raw=document.getElementById('rawText').value.trim();
+  const raw=readSanitizedRawText();
   if(!raw){ showStatus('Paste some text first.', 'error'); showStep(1); return; }
   refreshReview();
   showStep(3);
