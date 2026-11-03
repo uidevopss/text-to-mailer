@@ -763,11 +763,31 @@ Know More</textarea>
           <div class="options-title">Hero image controls</div>
           <div class="banner-tools" id="bannerToolsCard" style="margin-top:0">
             <div class="banner-mini-head">Choose how the hero visual is created</div>
+            <div id="imageEngineRow" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 10px;">
+              <label for="imageEngine" style="font-weight:600;font-size:13px;">Image engine</label>
+              <select id="imageEngine" onchange="onImageEngineChange()" style="padding:8px 10px;border-radius:8px;border:1px solid #cfd6d6;font-size:13px;">
+                <option value="ai1">Ai-1 — ChatGPT (best text in image)</option>
+                <option value="poll">Pollinations FLUX (free, no key)</option>
+                <option value="cf">Cloudflare FLUX.1 schnell (free daily, key)</option>
+                <option value="qwen">Qwen-Image (Hugging Face — needs HF credits/PRO)</option>
+                <option value="flux">FLUX.1 schnell (Hugging Face — needs HF credits/PRO)</option>
+                <option value="sd35">Stable Diffusion 3.5 (Hugging Face — needs HF credits/PRO)</option>
+              </select>
+            </div>
+            <div id="cfRow" style="display:none;margin:0 0 10px;">
+              <input type="text" id="cfAccount" placeholder="Cloudflare Account ID" autocomplete="off" oninput="saveCfCreds()" style="width:100%;max-width:420px;padding:8px 10px;border-radius:8px;border:1px solid #cfd6d6;font-size:13px;margin-bottom:6px;">
+              <input type="password" id="cfToken" placeholder="Cloudflare API token (Workers AI)" autocomplete="off" oninput="saveCfCreds()" style="width:100%;max-width:420px;padding:8px 10px;border-radius:8px;border:1px solid #cfd6d6;font-size:13px;">
+              <div class="hint">Free account at dash.cloudflare.com → AI → Workers AI → “Use REST API” shows the Account ID and lets you create the token. Free allowance: 10,000 neurons per day. Stored only in this browser.</div>
+            </div>
+            <div id="hfTokenRow" style="display:none;margin:0 0 10px;">
+              <input type="password" id="hfToken" placeholder="Hugging Face token (hf_…)" autocomplete="off" oninput="saveHfToken()" style="width:100%;max-width:420px;padding:8px 10px;border-radius:8px;border:1px solid #cfd6d6;font-size:13px;">
+              <div class="hint">Free token: huggingface.co/settings/tokens → create a token with the “Make calls to Inference Providers” permission. It is stored only in this browser and sent only to your local bridge. Free accounts get limited monthly credits.</div>
+            </div>
             <div class="mini-row">
               <button id="chatgptBannerBtn" class="primary" onclick="generateChatGPTBanner()">✨ Ai-1 — Generate Image</button>
               <button onclick="clearBanner()">Remove</button>
             </div>
-            <div class="hint">Ai-1 creates the hero image through the connected Edge session. The saved banner is resized to max 650px wide and compressed below 1 MB.</div>
+            <div class="hint" id="engineHint">Ai-1 creates the hero image through the connected Edge session. The saved banner is resized to max 650px wide and compressed below 1 MB.</div>
             <input type="file" id="bannerInput" accept="image/*" onchange="handleBannerUpload(event)">
             <div id="bannerPreviewWrap" class="banner-preview"><img id="bannerPreview" alt="Banner preview"><span class="banner-badge">✓ Banner ready — will be inserted into the hero</span></div>
             <div id="bannerStatus" class="hint"></div>
@@ -1648,6 +1668,60 @@ const CREATIVE_BRIEF_HISTORY_KEY = 'ttm_creative_brief_history_v23';
 function readCreativeBriefHistory(){ try { return JSON.parse(localStorage.getItem(CREATIVE_BRIEF_HISTORY_KEY) || '[]').filter(x => x && x.summary); } catch(e){ return []; } }
 function writeCreativeBriefHistory(list){ try { localStorage.setItem(CREATIVE_BRIEF_HISTORY_KEY, JSON.stringify(list.slice(0,24))); } catch(e){} }
 function creativeFingerprint(text){ let h=2166136261; for(const ch of String(text||'')){ h ^= ch.charCodeAt(0); h = Math.imul(h,16777619); } return (h>>>0).toString(16); }
+
+/* ===== REFERENCE STYLE (Shiksha / SRHU admissions mailers) =====
+   Set to false to go back to the old randomised art-direction system. */
+const REFERENCE_STYLE_ON = true;
+const REF_TEAL = '#0B6E6E', REF_ORANGE = '#FBB04D', REF_BG = '#F5F5F3', REF_MINT = '#DFE9E7';
+const REF_BENEFIT_VARIANTS = [
+  'MINT PANEL: one rounded panel (background #DFE9E7, border-radius 12px, padding 24px) containing the benefit points in a 2-column grid; each point = teal circular icon badge on the left, then bold title (14px, #222) and a lighter detail line (14px, #555) on the right, left-aligned.',
+  'WHITE CARDS: on the #F5F5F3 page, a 2-column grid of white cards (border-radius 8px, subtle 1px #ECECEC border, padding 14px 16px); each card = light-teal circular icon badge on the left, bold uppercase-or-title-case title (14px, #222) over a lighter detail line (14px, #555).',
+  'DEEP TEAL PANEL: one rounded panel (background #0B6E6E, border-radius 12px, padding 20px) with a white centred heading, then the points stacked as full-width white rows (border-radius 6px, padding 14px 16px, 8px gap); each row = light-teal circular icon badge on the left, BOLD title then " – " detail text in one line (14px, #333).',
+  'CENTRED ICON GRID: no panel; a 2-column grid on the #F5F5F3 page; each point = 60px teal circular icon badge centred on top, then centred bold title (14px, #222) and a lighter detail line (14px, #555) underneath, generous 28px spacing between rows.'
+];
+function referenceEmailDirective(colorLine){
+  const variant = REF_BENEFIT_VARIANTS[bagDraw('refBenefit', REF_BENEFIT_VARIANTS.length)];
+  return `VISUAL DESIGN DIRECTION — "UNIVERSITY ADMISSIONS MAILER" REFERENCE STYLE. Follow this closely; it overrides any other layout/style/archetype instruction in this prompt.
+LOOK: clean, airy, modern Indian higher-education admissions mailer (like Shiksha programme mailers). Light, flat and spacious: one deep-teal accent plus one warm-orange action colour, soft off-white/grey backgrounds, crisp dark-grey text. No gradients, no heavy shadows, no dark full-bleed backgrounds, no decorative clutter.
+PAGE: email body background ${REF_BG}; a single centred 600px column; no outer border or outer rounded corners.
+STRUCTURE, top to bottom (include a part only when the source content supports it; never invent copy):
+1. HERO — the banner image, full column width, edge to edge: display:block; width:100%; height:auto; no padding, border or radius. The banner picture already contains the programme name, headline and main CTA, so do NOT repeat them as live text directly under it.
+2. INTRO — one centred paragraph, 14–15px, line-height 1.55, colour #444, padding 32px 40px 24px, taken from the supporting/description sentence(s) of the source.
+3. BENEFITS — a centred bold section heading (17px, weight 700, #333; ideally the source's own "Why study …?" style wording), then the supplied benefit/feature points. Presentation for THIS email: ${variant} With an odd number of points keep the grid balanced (last item spans full width). Email clients block SVG and remote images, so draw each icon badge as a table cell with bgcolor and border-radius:50% (about 52–60px, content centred) holding ONE simple white (or teal on light badges) Unicode symbol such as ✓ ★ ✚ ➜ ● ◆ that loosely suits the point. No emoji, no image icons.
+4. CLOSING — if the source has a closing/motivational line, show it centred, bold, 16px, colour ${REF_TEAL}, padding 28px 24px 14px. Then the main CTA button, centred, if the source contains a call to action.
+CTA BUTTON: flat rectangle (border-radius 3px, no shadow, no pill), background ${REF_ORANGE}, text #1A1A1A, 16–17px bold UPPERCASE, padding 14px 34px, built as a bulletproof table/anchor button. Use the exact CTA wording from the source and the URL from the source; if no URL was supplied use href="#" as an editable placeholder (do not invent a real URL). The same button style is used wherever a CTA appears.
+SPACING: 28–40px between blocks, whitespace rather than dividers or boxes. Do not add a footer — the app adds it.
+TYPOGRAPHY: font-family Inter, 'Segoe UI', Roboto, Arial, Helvetica, sans-serif. Headings weight 700, body 14–15px, centred text for intro/closing, left-aligned text inside benefit items.
+${colorLine}
+MOBILE: at max-width:600px stack two-column benefit grids into one column, keep side padding at least 20px, keep the CTA button full-width-friendly.`;
+}
+function referenceBannerPrompt(heroMessage, rawSource, paletteInstruction){
+  const src = String(rawSource || '').replace(/\s+/g,' ').trim().slice(0, 900);
+  return `Create ONE finished, professional education-admissions EMAIL HERO BANNER in the style of premium Shiksha / university programme-promotion mailers. It is a single flat marketing graphic, not a full email, not a website screenshot, not a collage.
+
+FORMAT: roughly 3:2 landscape (about 600 × 390 px, ratio ≈ 1.55:1) — NOT a thin wide strip. Keep 24px safe margins.
+
+LAYOUT (follow strictly):
+- Very light, bright, airy background: white to soft warm-grey/pale tint, with a gently blurred, relevant real-world setting (clinic, laboratory, classroom, campus building or similar) fading into it. Clean and uncluttered.
+- LEFT ~55% — left-aligned text block, top to bottom:
+  1) PROGRAMME / TOPIC NAME in very large bold sans-serif, deep teal (#0B6E6E);
+  2) a second, smaller bold charcoal line (for example the admissions/intake line) ONLY if it exists in the source;
+  3) a short, thin teal accent rule;
+  4) the MAIN HEADLINE in charcoal (#2B2B2B), large, regular/light weight with its key word(s) in bold;
+  5) ONE flat rectangular orange (#FBB04D) button with a bold dark UPPERCASE label — ONLY if the source contains a call to action such as "Apply Now", using those exact words.
+- RIGHT ~45% — one realistic, friendly, well-lit waist-up photo of a single person who fits the programme (student, clinician, lab scientist, trainer…), looking confident and approachable, in a natural authentic setting (Indian context when the content is Indian). Soften the photo's left edge with a smooth fade so there is no hard box edge.
+- Optional: one thin diagonal or bar accent in teal or orange. Nothing else decorative.
+
+EXACT HERO MESSAGE (main headline — wording must not change):
+${heroMessage}
+
+SOURCE CONTENT (use ONLY to pick the programme/topic name, the admissions line, the CTA label and a relevant photo subject; do not render the rest):
+${src}
+
+TEXT RULES: the only words in the image are the programme/topic name, the optional admissions line, the headline and the optional CTA label, all taken from the text above. Do not invent claims, statistics, dates, slogans, benefits, logos, badges or extra captions. All lettering must be crisp, correctly spelled, high contrast and unwarped.
+COLOURS: deep teal #0B6E6E for the programme name and accent rule, charcoal for text, orange #FBB04D for the button, light neutral background.${paletteInstruction ? ' If brand colours are given below, use them instead of the teal/orange.' : ''}
+NOT ALLOWED: ChatGPT or browser interface elements, chat boxes, download/edit/share buttons, email mock-ups, watermarks, borders, fake logos, multiple options. Return one single finished image only.${paletteInstruction}`;
+}
 function inferCampaignFocus(raw=''){
   const t=String(raw).toLowerCase();
   if(/last date|deadline|closing on|closes on|final call|last few hours|few hrs|seats are filling|limited seats|application closing|apply before|due date/.test(t)) return 'deadline/admissions urgency';
@@ -1721,7 +1795,7 @@ function creativeAvoidanceText(brief){
   return recent.length ? `\nRECENT DESIGN DIRECTIONS TO AVOID REPEATING:\n${recent.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n` : '';
 }
 function emailCreativeDirective(brief, brandPalette){
-  if(!brief) return '';
+  if(!brief || REFERENCE_STYLE_ON) return '';
   const paletteRule=brandPalette
     ? `Use the detected website brand palette as the colour source. Do not replace its hues; vary the area coverage, contrast and placement of those colours instead.`
     : `Follow the current palette direction, with this colour placement rule: ${brief.colourPlacement}.`;
@@ -1754,6 +1828,108 @@ async function persistOptimizedBanner(dataUri, originalFilename){
   }
 }
 
+
+/* ===== Image engines (Ai-1 + Hugging Face: Qwen-Image / FLUX.1 / SD 3.5) ===== */
+const IMAGE_ENGINES = {
+  ai1:  { label:'Ai-1' },
+  poll: { label:'Pollinations FLUX' },
+  cf:   { label:'Cloudflare FLUX.1' },
+  qwen: { label:'Qwen-Image' },
+  flux: { label:'FLUX.1' },
+  sd35: { label:'Stable Diffusion 3.5' }
+};
+function getImageEngine(){
+  const v = document.getElementById('imageEngine')?.value || 'ai1';
+  return IMAGE_ENGINES[v] ? v : 'ai1';
+}
+function onImageEngineChange(){
+  try{ localStorage.setItem('ttm_image_engine', getImageEngine()); }catch(e){}
+  updateImageEngineUI();
+}
+function saveCfCreds(){
+  try{ localStorage.setItem('ttm_cf_account', document.getElementById('cfAccount')?.value.trim() || ''); localStorage.setItem('ttm_cf_token', document.getElementById('cfToken')?.value.trim() || ''); }catch(e){}
+}
+function saveHfToken(){
+  try{ localStorage.setItem('ttm_hf_token', document.getElementById('hfToken')?.value.trim() || ''); }catch(e){}
+}
+function updateImageEngineUI(){
+  const eng = getImageEngine();
+  const row = document.getElementById('hfTokenRow'); if(row) row.style.display = ['qwen','flux','sd35'].includes(eng) ? 'block' : 'none';
+  const cfr = document.getElementById('cfRow'); if(cfr) cfr.style.display = eng==='cf' ? 'block' : 'none';
+  const btn = document.getElementById('chatgptBannerBtn');
+  if(btn && !chatGPTGenerationBusy) btn.textContent = `✨ ${IMAGE_ENGINES[eng].label} — Generate Image`;
+  const hint = document.getElementById('engineHint');
+  if(hint) hint.textContent = eng==='ai1'
+    ? 'Ai-1 creates the hero image through the connected Edge session. The saved banner is resized to max 650px wide and compressed below 1 MB.'
+    : `${IMAGE_ENGINES[eng].label} runs via your local bridge. The saved banner is resized to max 650px wide and compressed below 1 MB. Text inside AI images can occasionally be misspelled — check the banner before sending.`;
+}
+(function initImageEngine(){
+  const init = () => {
+    try{
+      const e = localStorage.getItem('ttm_image_engine'); if(e && IMAGE_ENGINES[e]) document.getElementById('imageEngine').value = e;
+      const t = localStorage.getItem('ttm_hf_token'); if(t) document.getElementById('hfToken').value = t;
+      const ca = localStorage.getItem('ttm_cf_account'); if(ca) document.getElementById('cfAccount').value = ca;
+      const ct = localStorage.getItem('ttm_cf_token'); if(ct) document.getElementById('cfToken').value = ct;
+    }catch(e){}
+    updateImageEngineUI();
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else setTimeout(init, 0);
+})();
+function extractBannerBits(raw, heroMessage){
+  const text = String(raw || '');
+  const cta = (text.match(/\b(apply now|enrol(?:l)? now|register now|explore now|book now|enquire now|learn more|know more|get started)\b/i) || [''])[0];
+  const programme = (text.match(/\b(B\.?\s?Tech|M\.?\s?Tech|B\.?\s?Sc\.?|M\.?\s?Sc\.?|BBA|MBA|BCA|MCA|B\.?\s?Pharm|M\.?\s?Pharm|B\.?\s?Optom|B\.?\s?MLS|BASLP|MBBS|B\.?\s?Com|M\.?\s?Com|BA|MA|PhD)(?![A-Za-z])[^\n.,:;|!?]{0,50}/i) || [''])[0].trim();
+  const admissions = (text.match(/admissions?\s*(?:open\s*)?(?:for\s*)?20\d\d(?:\s*[-–]\s*\d{2,4})?/i) || [''])[0].trim();
+  return { cta: cta ? cta.toUpperCase() : '', programme, admissions };
+}
+function diffusionBannerPrompt(heroMessage, raw, palette, engine){
+  const b = extractBannerBits(raw, heroMessage);
+  const c1 = palette?.colors?.[0]?.hex || '#0B6E6E';
+  const c2 = palette?.colors?.[1]?.hex || '#FBB04D';
+  const parts = [
+    'Professional university admissions email hero banner, flat finished marketing graphic, wide landscape 3:2 format, bright airy light background (white to soft warm grey) with a softly blurred relevant campus, clinic or laboratory setting.',
+    'LEFT HALF, left-aligned clean modern sans-serif typography on the light background, top to bottom:'
+  ];
+  if(b.programme) parts.push(`first the programme name "${b.programme}" in very large bold text, colour ${c1};`);
+  if(b.admissions) parts.push(`then the line "${b.admissions}" in smaller bold dark charcoal text;`);
+  parts.push(`a short thin accent line in ${c1};`);
+  parts.push(`the headline "${heroMessage}" in large dark charcoal text with the key words in bold;`);
+  if(b.cta) parts.push(`then a flat rectangular button in ${c2} with the bold dark uppercase text "${b.cta}".`);
+  parts.push(`RIGHT HALF: a realistic, friendly, well-lit waist-up photograph of one confident person who fits the subject "${b.programme || heroMessage}", softly fading into the background with no hard edges.`);
+  if(engine==='cf') parts.push('Composition rule: the image will be centre-cropped to a wide 3:2 band, so keep all text and the person inside the middle horizontal band with empty background above and below.');
+  parts.push('Crisp, correctly spelled, high-contrast lettering; only the quoted words appear in the image. No logos, no watermark, no borders, no extra text, no interface elements.');
+  return parts.join(' ');
+}
+async function requestHfImage(engine, prompt){
+  const token = (document.getElementById('hfToken')?.value || '').trim();
+  const cfAccountId = (document.getElementById('cfAccount')?.value || '').trim();
+  const cfToken = (document.getElementById('cfToken')?.value || '').trim();
+  if(['qwen','flux','sd35'].includes(engine) && !token) throw new Error('Paste your Hugging Face token first (huggingface.co/settings/tokens).');
+  if(engine==='cf' && (!cfAccountId || !cfToken)) throw new Error('Enter your Cloudflare Account ID and API token first.');
+  const response = await fetch(CHATGPT_BRIDGE + '/api/hf-image', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({engine, prompt, token, cfAccountId, cfToken, width:1216, height:784})
+  });
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok || !payload.ok) throw new Error(payload.message || `Image bridge returned HTTP ${response.status}`);
+  return payload;
+}
+function ensureBannerAspect(blob, minRatio=1.3, targetRatio=1.55){
+  return new Promise(resolve=>{
+    const img = new Image(); const u = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(u);
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if(!w || !h || w/h >= minRatio) return resolve(blob);
+      const nh = Math.round(w/targetRatio), sy = Math.round((h-nh)/2);
+      const c = document.createElement('canvas'); c.width = w; c.height = nh;
+      c.getContext('2d').drawImage(img, 0, sy, w, nh, 0, 0, w, nh);
+      c.toBlob(b => resolve(b || blob), 'image/png');
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); resolve(blob); };
+    img.src = u;
+  });
+}
 async function generateChatGPTBanner(options={}){
   const raw = readSanitizedRawText();
   if(!raw){ showStatus('Paste your email content first.', 'error'); return false; }
@@ -1768,39 +1944,48 @@ async function generateChatGPTBanner(options={}){
   const bannerText = getBannerText(raw, parsed);
   const variation = creativeBrief?.bannerDirection || randomBannerVariation();
   const explicit = parsed.imageTags && parsed.imageTags.length ? parsed.imageTags[0].content.trim() : '';
+  const engine = getImageEngine();
+  const engineLabel = IMAGE_ENGINES[engine].label;
 
   chatGPTGenerationBusy = true;
   btn.disabled = true;
   const originalLabel = btn.textContent;
   btn.textContent = '⏳ Generating…';
-  document.getElementById('bannerStatus').textContent = 'Opening Ai-1 and generating the image…';
-  showStatus('Ai-1 is generating the image…', '');
-  showBusy('Ai-1 is generating the image…');
+  document.getElementById('bannerStatus').textContent = engine==='ai1' ? 'Opening Ai-1 and generating the image…' : `Generating with ${engineLabel}… this can take up to a minute.`;
+  showStatus(`${engineLabel} is generating the image…`, '');
+  showBusy(`${engineLabel} is generating the image…`);
 
   try{
     const palette = await resolveBrandPalette(raw, document.getElementById('instructionField')?.value || '', true);
     const paletteInstruction = palette ? `\n\nBRAND COLOURS FROM ${palette.domain || palette.url}: Use these colours consistently: ${palette.colors.map(c=>c.hex).slice(0,5).join(', ')}. The first colour is the primary brand colour. Keep the banner consistent with this website identity; do not invent a different palette.` : '';
-    const prompt = `Create ONE exceptionally polished professional marketing-campaign banner image. This is a finished LANDSCAPE AD BANNER, not a full email, not a website screenshot and not a collage of multiple concepts.\n\nEXACT HERO/BANNER MESSAGE (the only readable text allowed):\n${explicit || bannerText}\n\nPRIMARY VISUAL DIRECTION:\n${variation}\n${bannerCreativeDirective(creativeBrief, palette)}\nREQUIREMENTS:\n- Compose for a wide email hero, roughly 2.4:1 landscape. Final output is optimized to max 650px wide and under 1 MB. Keep the headline within safe margins.\n- Render the exact supplied message only. No additional headings, captions, CTA labels, dates, statistics, logos, badges containing text, or tiny pseudo-text. If the hero message includes a date, that exact date may be emphasized but never changed.\n- Use one strong focal object/person/illustration relevant to the campaign, one clear headline area and a disciplined grid. The overall result should resemble a professional education-marketing agency banner, like a thoughtfully art-directed admissions deadline, ranking/achievement, programme promotion or urgency creative.\n- Keep contrast high and all words crisp and correctly spelled. Avoid warped lettering, clutter, generic gradients without a focal concept, generic stock-banner templates, excessive floating icons, and random decorative text.\n- Do not invent institutional logos, brand names or unsupported claims. Do not use fake logos.\n- No email mock-up, browser UI, collage sheet, watermark, border preview or multiple banner options. Return one single finished image only.${paletteInstruction}`;
-    const response = await fetch(CHATGPT_BRIDGE + '/api/chatgpt-banner', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt, bannerText})
-    });
-    const payload = await response.json().catch(()=>({}));
-    if(!response.ok || !payload.ok){
-      const msg = payload.message || `Ai-1 bridge returned HTTP ${response.status}`;
-      throw new Error(msg);
+    const legacyPrompt = `Create ONE exceptionally polished professional marketing-campaign banner image. This is a finished LANDSCAPE AD BANNER, not a full email, not a website screenshot and not a collage of multiple concepts.\n\nEXACT HERO/BANNER MESSAGE (the only readable text allowed):\n${explicit || bannerText}\n\nPRIMARY VISUAL DIRECTION:\n${variation}\n${bannerCreativeDirective(creativeBrief, palette)}\nREQUIREMENTS:\n- Compose for a wide email hero, roughly 2.4:1 landscape. Final output is optimized to max 650px wide and under 1 MB. Keep the headline within safe margins.\n- Render the exact supplied message only. No additional headings, captions, CTA labels, dates, statistics, logos, badges containing text, or tiny pseudo-text. If the hero message includes a date, that exact date may be emphasized but never changed.\n- Use one strong focal object/person/illustration relevant to the campaign, one clear headline area and a disciplined grid. The overall result should resemble a professional education-marketing agency banner, like a thoughtfully art-directed admissions deadline, ranking/achievement, programme promotion or urgency creative.\n- Keep contrast high and all words crisp and correctly spelled. Avoid warped lettering, clutter, generic gradients without a focal concept, generic stock-banner templates, excessive floating icons, and random decorative text.\n- Do not invent institutional logos, brand names or unsupported claims. Do not use fake logos.\n- No email mock-up, browser UI, collage sheet, watermark, border preview or multiple banner options. Return one single finished image only.${paletteInstruction}`;
+    const prompt = REFERENCE_STYLE_ON ? referenceBannerPrompt(explicit || bannerText, raw, paletteInstruction) : legacyPrompt;
+    let payload;
+    if(engine === 'ai1'){
+      const response = await fetch(CHATGPT_BRIDGE + '/api/chatgpt-banner', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt, bannerText})
+      });
+      payload = await response.json().catch(()=>({}));
+      if(!response.ok || !payload.ok){
+        const msg = payload.message || `Ai-1 bridge returned HTTP ${response.status}`;
+        throw new Error(msg);
+      }
+    } else {
+      payload = await requestHfImage(engine, diffusionBannerPrompt(explicit || bannerText, raw, palette, engine));
     }
 
     const imageResponse = await fetch(CHATGPT_BRIDGE + payload.imageUrl + '?v=' + Date.now());
     if(!imageResponse.ok) throw new Error('Generated image was saved, but the app could not load the local image file.');
-    const blob = await imageResponse.blob();
+    let blob = await imageResponse.blob();
+    if(engine !== 'ai1') blob = await ensureBannerAspect(blob);
     const dataUri = await optimizeBannerBlob(blob);
     const optimizedSaved = await persistOptimizedBanner(dataUri, payload.filename);
     const savedName = optimizedSaved?.filename || payload.filename;
 
-    setBannerPreview(dataUri, 'ai-1', `✓ Ai-1 image optimized to max 650px and under 1 MB, saved locally as “${savedName}”.`);
-    showToast('Ai-1 image generated, optimized and saved locally');
+    setBannerPreview(dataUri, 'ai-1', `✓ ${engineLabel} image optimized to max 650px and under 1 MB, saved locally as “${savedName}”.`);
+    showToast(`${engineLabel} image generated, optimized and saved locally`);
 
     if(currentStep === 4){
       // Same as the original: a freshly generated banner is inserted by rebuilding the mailer.
@@ -1815,13 +2000,13 @@ async function generateChatGPTBanner(options={}){
   }catch(err){
     const message = String(err && err.message || err);
     if(/Failed to fetch|NetworkError|fetch/i.test(message)){
-      document.getElementById('bannerStatus').textContent = 'Open the local Edge bridge once and complete the Ai-1 session, then click Ai-1 — Generate Image again.';
-      showStatus('Start the local Ai-1 bridge first.', 'error');
+      document.getElementById('bannerStatus').textContent = engine==='ai1' ? 'Open the local Edge bridge once and complete the Ai-1 session, then click Ai-1 — Generate Image again.' : 'The local bridge is not running. Start start-chatgpt-bridge.bat and try again.';
+      showStatus(engine==='ai1' ? 'Start the local Ai-1 bridge first.' : 'Start the local bridge first.', 'error');
     }else{
       document.getElementById('bannerStatus').textContent = message;
       showStatus(message, 'error');
     }
-    logGenIssue('Ai-1 image generation failed:\n' + message);
+    logGenIssue(`${engineLabel} image generation failed:\n` + message);
     return false;
   }finally{
     chatGPTGenerationBusy = false;
@@ -2035,8 +2220,8 @@ function buildTwoLogoHeader(){
   <tr><td align="center" style="padding:0;margin:0;">
     <table role="presentation" width="650" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:650px;border-collapse:collapse;background:#ffffff;">
       <tr>
-        <td align="left" valign="middle" style="padding:14px 18px 12px 18px;vertical-align:middle;width:50%;">${left}</td>
-        <td align="right" valign="middle" style="padding:14px 18px 12px 18px;vertical-align:middle;width:50%;">${right}</td>
+${(left && right) ? `<td align="left" valign="middle" style="padding:14px 18px 12px 18px;vertical-align:middle;width:50%;">${left}</td>
+        <td align="right" valign="middle" style="padding:14px 18px 12px 18px;vertical-align:middle;width:50%;">${right}</td>` : `<td align="center" valign="middle" style="padding:16px 18px 10px 18px;vertical-align:middle;"><div style="display:inline-block;">${left || right}</div></td>`}
       </tr>
     </table>
   </td></tr>
@@ -2391,6 +2576,19 @@ Keep everything else about the email consistent with the current version unless 
       const bc = await dominantBannerColors(bannerDataUri);
       if(bc.length) colorLine = `Color direction: the hero image is already chosen, so build the colour scheme AROUND ITS OWN COLOURS — primary ${bc[0]}${bc[1] ? ', accent ' + bc[1] : ''} — plus clean neutrals (white / off-white / dark text). Do not introduce clashing extra brand colours.`;
     }
+    const legacyDesignBlock = `Visual design direction for THIS email (commit fully to this — don't fall back to a generic plain template, and do NOT default to a stack of white rounded cards with pill buttons unless the direction below explicitly says so):
+LAYOUT: ${style.archetype}
+${colorLine}
+TYPOGRAPHY (use these exact font-family stacks inline, with their fallbacks): ${style.fonts}
+SHAPE LANGUAGE: ${style.shape}.
+Make this email look clearly different from a typical newsletter: distinctive hero treatment, distinctive section styling, and a colour/typography feel that matches the direction above.
+${emailCreativeDirective(freshCreativeBrief, brandPalette)}`;
+    if(REFERENCE_STYLE_ON && !brandPalette && !useImageBanner){
+      colorLine = `Color direction: deep teal ${REF_TEAL} for headings/accents, orange ${REF_ORANGE} for buttons, text #2B2B2B/#444, backgrounds ${REF_BG} and white, mint panels ${REF_MINT}.`;
+    }else if(REFERENCE_STYLE_ON && !brandPalette && useImageBanner){
+      colorLine += ` Keep buttons flat orange (${REF_ORANGE}) with dark text unless the banner clearly uses a different action colour.`;
+    }
+    const designBlock = REFERENCE_STYLE_ON ? referenceEmailDirective(colorLine) : legacyDesignBlock;
     prompt = `You are an expert email marketing designer. Build a complete, responsive, email-client-safe HTML newsletter/marketing email from the raw content below.
 
 Technical requirements:
@@ -2401,13 +2599,7 @@ Technical requirements:
 - STRICT CONTENT FIDELITY: Do not invent additional copy, benefits, claims, dates, statistics, offers, sign-offs, or explanations. Every visible sentence must be present in or directly supported by RAW CONTENT; headings may only be concise restatements of supplied wording. Only add a CTA if the source content explicitly asks for an action; never invent a destination URL or placeholder link.
 - Never put a generic stock-photo URL or external image URL in the output when a banner placeholder is supplied; use the placeholder exactly. Never output any raw or escaped <xml>...</xml> block or Office settings payload; Office XML is metadata, not visible email content.
 
-Visual design direction for THIS email (commit fully to this — don't fall back to a generic plain template, and do NOT default to a stack of white rounded cards with pill buttons unless the direction below explicitly says so):
-LAYOUT: ${style.archetype}
-${colorLine}
-TYPOGRAPHY (use these exact font-family stacks inline, with their fallbacks): ${style.fonts}
-SHAPE LANGUAGE: ${style.shape}.
-Make this email look clearly different from a typical newsletter: distinctive hero treatment, distinctive section styling, and a colour/typography feel that matches the direction above.
-${emailCreativeDirective(freshCreativeBrief, brandPalette)}
+${designBlock}
 
 User's own style/content instructions, if any (these take priority over the direction above where they conflict): "${instructions || 'None given — just follow the visual direction above.'}"${logoInstruction}${roleHintsBlock}${brandPaletteDirective}
 

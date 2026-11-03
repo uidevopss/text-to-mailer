@@ -8,6 +8,7 @@
     "start:bridge": "node server.js"
   },
   "dependencies": {
+    "@huggingface/inference": "latest",
     "express": "^5.1.0",
     "playwright": "^1.55.0"
   }
